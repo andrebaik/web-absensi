@@ -3,8 +3,9 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { usersDB } from '../../data/mockDatabase';
 import { useToast } from '../../context/ToastContext';
+import { api } from '../../api/client';
+
 import { Plus, Pencil, Trash2, Shield } from 'lucide-react';
 
 const emptyForm = { name: '', email: '', password: '', role: 'mahasiswa' };
@@ -20,7 +21,24 @@ export default function HakAksesPage() {
   const [confirm, setConfirm] = useState(null);
   const { addToast } = useToast();
 
-  useEffect(() => { setData(usersDB.getAll()); }, []);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get('/users');
+        setData(Array.isArray(res) ? res : []);
+      } catch (err) {
+        console.error('Gagal memuat user:', err);
+        addToast('Gagal memuat data', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [addToast]);
+
 
   function validate() {
     const e = {};
@@ -34,20 +52,55 @@ export default function HakAksesPage() {
   function openAdd() { setForm(emptyForm); setEditId(null); setErrors({}); setModal(true); }
   function openEdit(row) { setForm({ name: row.name, email: row.email, password: '', role: row.role }); setEditId(row.id); setErrors({}); setModal(true); }
 
-  function handleSave() {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    const payload = { ...form };
-    if (editId && !form.password) delete payload.password;
-    if (editId) { usersDB.update(editId, payload); addToast('User berhasil diperbarui'); }
-    else { usersDB.create(payload); addToast('User berhasil ditambahkan'); }
-    setData(usersDB.getAll()); setModal(false);
+  async function fetchData() {
+    setLoading(true);
+    try {
+      const res = await api.get('/users');
+      setData(Array.isArray(res) ? res : []);
+    } catch (err) {
+      console.error('Gagal memuat user:', err);
+      addToast('Gagal memuat data', 'error');
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleDelete(id) {
-    usersDB.delete(id); setData(usersDB.getAll()); setConfirm(null);
-    addToast('User berhasil dihapus', 'error');
+  async function handleSave() {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+
+    try {
+      const payload = { ...form };
+      if (editId && !form.password) delete payload.password;
+
+      if (editId) {
+        await api.put(`/users/${editId}`, payload);
+        addToast('User berhasil diperbarui');
+      } else {
+        await api.post('/users', payload);
+        addToast('User berhasil ditambahkan');
+      }
+
+      await fetchData();
+      setModal(false);
+    } catch (err) {
+      console.error('Gagal menyimpan user:', err);
+      addToast('Gagal menyimpan data', 'error');
+    }
   }
+
+  async function handleDelete(id) {
+    try {
+      await api.delete(`/users/${id}`);
+      setConfirm(null);
+      addToast('User berhasil dihapus', 'error');
+      await fetchData();
+    } catch (err) {
+      console.error('Gagal menghapus user:', err);
+      addToast('Gagal menghapus data', 'error');
+    }
+  }
+
 
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 

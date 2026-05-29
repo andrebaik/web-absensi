@@ -1,12 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
-import { initDB } from './data/mockDatabase';
+
 import ProtectedRoute from './components/common/ProtectedRoute';
 import ClickSpark from './components/common/ClickSpark';
 import { ThemeProvider } from './context/ThemeContext';
 
 import LoginPage from './pages/auth/LoginPage';
+
 
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';

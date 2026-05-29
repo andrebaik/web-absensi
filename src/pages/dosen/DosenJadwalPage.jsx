@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
-import { jadwalDB, mataKuliahDB, ruanganDB } from '../../data/mockDatabase';
+import { api } from '../../api/client';
 
 export default function DosenJadwalPage() {
   const { profile } = useAuth();
@@ -9,15 +9,31 @@ export default function DosenJadwalPage() {
 
   useEffect(() => {
     if (!profile) return;
-    const mks = mataKuliahDB.getAll();
-    const ruangans = ruanganDB.getAll();
-    const jadwal = jadwalDB.getByDosen(profile.id);
-    setJadwalList(jadwal.map(j => ({
-      ...j,
-      mk_nama: mks.find(m => m.id === j.mata_kuliah_id)?.nama_mk || '-',
-      ruangan_nama: ruangans.find(r => r.id === j.ruangan_id)?.nama_ruangan || '-',
-    })));
+
+    (async () => {
+      try {
+        const [jadwal, mks, ruangans] = await Promise.all([
+          api.get(`/jadwal/dosen/${profile.id}`),
+          api.get('/mata-kuliah'),
+          api.get('/ruangan'),
+        ]);
+
+        const mkMap = new Map((Array.isArray(mks) ? mks : []).map(m => [m.id, m.nama_mk]));
+        const ruangMap = new Map((Array.isArray(ruangans) ? ruangans : []).map(r => [r.id, r.nama_ruangan]));
+
+        const list = (Array.isArray(jadwal) ? jadwal : []).map(j => ({
+          ...j,
+          mk_nama: mkMap.get(j.mata_kuliah_id) || '-',
+          ruangan_nama: ruangMap.get(j.ruangan_id) || '-',
+        }));
+
+        setJadwalList(list);
+      } catch {
+        setJadwalList([]);
+      }
+    })();
   }, [profile]);
+
 
   const HARI = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 

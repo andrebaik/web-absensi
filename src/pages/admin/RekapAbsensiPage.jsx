@@ -1,38 +1,48 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import { absensiDB, mahasiswaDB, jadwalDB, mataKuliahDB } from '../../data/mockDatabase';
+import { api } from '../../api/client';
+import { useToast } from '../../context/ToastContext';
 
 export default function RekapAbsensiPage() {
   const [rekap, setRekap] = useState([]);
   const [filter, setFilter] = useState('');
+  const { addToast } = useToast();
 
   useEffect(() => {
-    const mhsList = mahasiswaDB.getAll();
-    const jadwalList = jadwalDB.getAll();
-    const mkList = mataKuliahDB.getAll();
-    const absensi = absensiDB.getAll();
-
-    const rows = [];
-    mhsList.forEach(mhs => {
-      const absMhs = absensi.filter(a => a.mahasiswa_id === mhs.id);
-      const grouped = {};
-      absMhs.forEach(a => {
-        const jadwal = jadwalList.find(j => j.id === a.jadwal_id);
-        if (!jadwal) return;
-        const mk = mkList.find(m => m.id === jadwal.mata_kuliah_id);
-        const key = `${mhs.id}_${jadwal.mata_kuliah_id}`;
-        if (!grouped[key]) grouped[key] = { mhs_nama: mhs.nama, mhs_nim: mhs.nim, mk_nama: mk?.nama_mk || '-', hadir: 0, izin: 0, sakit: 0, alpha: 0, total: 0 };
-        grouped[key][a.status_absensi.toLowerCase()]++;
-        grouped[key].total++;
-      });
-      rows.push(...Object.values(grouped));
-    });
-    setRekap(rows);
+    (async () => {
+      try {
+        const rows = await api.get('/absensi/rekap/admin');
+        // Backend output: { mata_kuliah, mahasiswa_id, hadir, izin, sakit, alpha, total, persentase }
+        const mapped = (Array.isArray(rows) ? rows : []).map(r => ({
+          mhs_nim: String(r.mahasiswa_id ?? ''),
+          mhs_nama: r.mahasiswa_nama || String(r.mahasiswa_id ?? ''),
+          mk_nama: r.mata_kuliah || '-',
+          hadir: r.hadir ?? 0,
+          izin: r.izin ?? 0,
+          sakit: r.sakit ?? 0,
+          alpha: r.alpha ?? 0,
+          total: r.total ?? 0,
+          // UI pakai % Kehadiran dari hadir/total, tapi backend sudah persentase.
+          persentase: r.persentase ?? r.persentase ?? (r.total ? Math.round(((r.hadir ?? 0) / (r.total ?? 1)) * 100) : 0),
+        }));
+        setRekap(mapped);
+      } catch (e) {
+        addToast(e.message || 'Gagal memuat rekap absensi', 'error');
+      }
+    })();
   }, []);
 
-  const filtered = filter ? rekap.filter(r => r.mhs_nama.toLowerCase().includes(filter.toLowerCase()) || r.mhs_nim.includes(filter) || r.mk_nama.toLowerCase().includes(filter.toLowerCase())) : rekap;
 
-  function pct(r) { return r.total ? Math.round((r.hadir / r.total) * 100) : 0; }
+  const filtered = filter
+    ? rekap.filter(
+        r =>
+          (r.mhs_nama || '').toLowerCase().includes(filter.toLowerCase()) ||
+          String(r.mhs_nim || '').includes(filter) ||
+          (r.mk_nama || '').toLowerCase().includes(filter.toLowerCase())
+      )
+    : rekap;
+
+  function pct(r) { return r.total ? Math.round((r.hadir / r.total) * 100) : (r.persentase ?? 0); }
   function barColor(p) { return p >= 75 ? '#10b981' : p >= 50 ? '#f59e0b' : '#ef4444'; }
 
   return (
@@ -45,6 +55,7 @@ export default function RekapAbsensiPage() {
           <input className="search-input" placeholder="Cari mahasiswa / NIM / mata kuliah..." value={filter} onChange={e => setFilter(e.target.value)} />
           <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{filtered.length} data</span>
         </div>
+
         <div className="table-wrapper">
           <table>
             <thead>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
-import { jadwalDB, mahasiswaDB, absensiDB, mataKuliahDB } from '../../data/mockDatabase';
+import { api } from '../../api/client';
+
 
 export default function DosenRekapPage() {
   const { profile } = useAuth();
@@ -10,29 +11,40 @@ export default function DosenRekapPage() {
 
   useEffect(() => {
     if (!profile) return;
-    const jadwal = jadwalDB.getByDosen(profile.id);
-    const mks = mataKuliahDB.getAll();
-    const mhsList = mahasiswaDB.getAll();
-    const absensi = absensiDB.getAll();
-    const rows = [];
-    jadwal.forEach(j => {
-      const mk = mks.find(m => m.id === j.mata_kuliah_id);
-      const mhsInKelas = mhsList.filter(m => m.kelas === j.kelas);
-      mhsInKelas.forEach(mhs => {
-        const absMhs = absensi.filter(a => a.jadwal_id === j.id && a.mahasiswa_id === mhs.id);
-        if (absMhs.length === 0) return;
-        const h = absMhs.filter(a => a.status_absensi === 'Hadir').length;
-        const iz = absMhs.filter(a => a.status_absensi === 'Izin').length;
-        const sk = absMhs.filter(a => a.status_absensi === 'Sakit').length;
-        const al = absMhs.filter(a => a.status_absensi === 'Alpha').length;
-        const total = absMhs.length;
-        rows.push({ nim: mhs.nim, nama: mhs.nama, mk_nama: mk?.nama_mk || '-', kelas: j.kelas, hadir: h, izin: iz, sakit: sk, alpha: al, total, pct: Math.round((h / total) * 100) });
-      });
-    });
-    setRekap(rows);
+
+    (async () => {
+      try {
+        const rows = await api.get(`/absensi/rekap/dosen/${profile.id}`);
+
+        const mapped = (Array.isArray(rows) ? rows : []).map(r => ({
+          nim: String(r.mahasiswa_id ?? ''),
+          nama: r.mahasiswa_nama || String(r.mahasiswa_id ?? ''),
+          mk_nama: r.mata_kuliah || '-',
+          kelas: r.kelas || '',
+          hadir: r.hadir ?? 0,
+          izin: r.izin ?? 0,
+          sakit: r.sakit ?? 0,
+          alpha: r.alpha ?? 0,
+          total: r.total ?? 0,
+          pct: r.persentase ?? (r.total ? Math.round(((r.hadir ?? 0) / (r.total ?? 1)) * 100) : 0),
+        }));
+
+        setRekap(mapped);
+      } catch {
+        setRekap([]);
+      }
+    })();
   }, [profile]);
 
-  const filtered = filter ? rekap.filter(r => r.nama.toLowerCase().includes(filter.toLowerCase()) || r.nim.includes(filter) || r.mk_nama.toLowerCase().includes(filter.toLowerCase())) : rekap;
+
+  const filtered = filter
+    ? rekap.filter(
+        r =>
+          (r.nama || '').toLowerCase().includes(filter.toLowerCase()) ||
+          String(r.nim || '').includes(filter) ||
+          (r.mk_nama || '').toLowerCase().includes(filter.toLowerCase())
+      )
+    : rekap;
   const barColor = p => p >= 75 ? '#10b981' : p >= 50 ? '#f59e0b' : '#ef4444';
 
   return (

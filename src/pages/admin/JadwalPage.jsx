@@ -3,8 +3,9 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { jadwalDB, mataKuliahDB, dosenDB, ruanganDB } from '../../data/mockDatabase';
 import { useToast } from '../../context/ToastContext';
+import { api } from '../../api/client';
+
 
 
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
@@ -26,32 +27,10 @@ export default function JadwalPage() {
   const { addToast } = useToast();
 
   useEffect(() => {
-    let isMounted = true;
-
-    const load = async () => {
-      try {
-        const [jadwalRes, mkRes, dosenRes, ruanganRes] = await Promise.all([
-          api.get('/jadwal'),
-          api.get('/mata-kuliah'),
-          api.get('/dosen'),
-          api.get('/ruangan')
-        ]);
-
-        if (!isMounted) return;
-        setData(Array.isArray(jadwalRes) ? jadwalRes : []);
-        setMks(Array.isArray(mkRes) ? mkRes : []);
-        setDosens(Array.isArray(dosenRes) ? dosenRes : []);
-        setRuangans(Array.isArray(ruanganRes) ? ruanganRes : []);
-      } catch (err) {
-        console.error('Gagal memuat jadwal:', err);
-      }
-    };
-
-    load();
-    return () => {
-      isMounted = false;
-    };
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
 
   function validate() {
@@ -71,48 +50,94 @@ export default function JadwalPage() {
     setEditId(row.id); setErrors({}); setConflict([]); setModal(true);
   }
 
-  function handleSave() {
-    // Revert: kembali ke mode mockDatabase sebelumnya (agar tidak mengubah fitur selain Prism).
+  async function fetchData() {
+    try {
+      const [jadwalRes, mkRes, dosenRes, ruanganRes] = await Promise.all([
+        api.get('/jadwal'),
+        api.get('/mata-kuliah'),
+        api.get('/dosen'),
+        api.get('/ruangan'),
+      ]);
+      setData(Array.isArray(jadwalRes) ? jadwalRes : []);
+      setMks(Array.isArray(mkRes) ? mkRes : []);
+      setDosens(Array.isArray(dosenRes) ? dosenRes : []);
+      setRuangans(Array.isArray(ruanganRes) ? ruanganRes : []);
+    } catch (err) {
+      console.error('Gagal memuat jadwal:', err);
+      addToast('Gagal memuat data', 'error');
+    }
+  }
+
+
+  async function handleSave() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
 
-    // NOTE: Ini harus kembali memakai jadwalDB/jadwal bentrok logic yang asli.
     const payload = {
       ...form,
       mata_kuliah_id: Number(form.mata_kuliah_id),
       dosen_id: Number(form.dosen_id),
-      ruangan_id: Number(form.ruangan_id)
+      ruangan_id: Number(form.ruangan_id),
     };
 
-    // eslint-disable-next-line no-undef
-    const res = editId ? jadwalDB.update(editId, payload) : jadwalDB.create(payload);
+    try {
+      const res = editId
+        ? await api.put(`/jadwal/${editId}`, payload)
+        : await api.post('/jadwal', payload);
 
-    if (res?.error) {
-      const msgs = res.conflicts.map(c => {
-        const mk = mks.find(m => m.id === c.mata_kuliah_id)?.nama_mk || '-';
-        const d = dosens.find(x => x.id === c.dosen_id)?.nama || '-';
-        let reason = [];
-        if (c.dosen_id === payload.dosen_id) reason.push('dosen bentrok');
-        if (c.ruangan_id === payload.ruangan_id) reason.push('ruangan bentrok');
-        if (c.kelas === payload.kelas) reason.push('kelas bentrok');
-        return `${mk} - ${d} (${reason.join(', ')})`;
-      });
-      setConflict(msgs);
-      return;
+      // Jika backend mengembalikan error conflict, biasanya bentuknya res.conflicts.
+      if (res?.error && Array.isArray(res?.conflicts)) {
+        const msgs = res.conflicts.map(c => {
+          const mk = mks.find(m => m.id === c.mata_kuliah_id)?.nama_mk || '-';
+          const d = dosens.find(x => x.id === c.dosen_id)?.nama || '-';
+          let reason = [];
+          if (c.dosen_id === payload.dosen_id) reason.push('dosen bentrok');
+          if (c.ruangan_id === payload.ruangan_id) reason.push('ruangan bentrok');
+          if (c.kelas === payload.kelas) reason.push('kelas bentrok');
+          return `${mk} - ${d} (${reason.join(', ')})`;
+        });
+        setConflict(msgs);
+        return;
+      }
+
+      addToast(editId ? 'Jadwal berhasil diperbarui' : 'Jadwal berhasil ditambahkan');
+      setModal(false);
+      setConflict([]);
+      await fetchData();
+    } catch (err) {
+      // backend jadwal conflict akan return 409 + { error:true, conflicts }
+      const conflicts = err?.message && typeof err.message === 'string' ? null : err?.conflicts;
+      if (err?.conflicts && Array.isArray(err.conflicts)) {
+        const msgs = err.conflicts.map(c => {
+          const mk = mks.find(m => m.id === c.mata_kuliah_id)?.nama_mk || '-';
+          const d = dosens.find(x => x.id === c.dosen_id)?.nama || '-';
+          let reason = [];
+          if (c.dosen_id === payload.dosen_id) reason.push('dosen bentrok');
+          if (c.ruangan_id === payload.ruangan_id) reason.push('ruangan bentrok');
+          if (c.kelas === payload.kelas) reason.push('kelas bentrok');
+          return `${mk} - ${d} (${reason.join(', ')})`;
+        });
+        setConflict(msgs);
+        return;
+      }
+
+      console.error('Gagal menyimpan jadwal:', err);
+      addToast('Gagal menyimpan data', 'error');
     }
-
-    addToast(editId ? 'Jadwal berhasil diperbarui' : 'Jadwal berhasil ditambahkan');
-
-    // eslint-disable-next-line no-undef
-    setData(jadwalDB.getAll());
-    setModal(false);
   }
 
-
-  function handleDelete(id) {
-    jadwalDB.delete(id); setData(jadwalDB.getAll()); setConfirm(null);
-    addToast('Jadwal berhasil dihapus', 'error');
+  async function handleDelete(id) {
+    try {
+      await api.delete(`/jadwal/${id}`);
+      setConfirm(null);
+      addToast('Jadwal berhasil dihapus', 'error');
+      await fetchData();
+    } catch (err) {
+      console.error('Gagal menghapus jadwal:', err);
+      addToast('Gagal menghapus data', 'error');
+    }
   }
+
 
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const getMkName = id => mks.find(m => m.id === id)?.nama_mk || '-';

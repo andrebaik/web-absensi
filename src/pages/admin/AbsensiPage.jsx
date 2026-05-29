@@ -3,9 +3,10 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { absensiDB, mahasiswaDB, jadwalDB, mataKuliahDB, dosenDB } from '../../data/mockDatabase';
 import { useToast } from '../../context/ToastContext';
+import { api } from '../../api/client';
 import { Pencil, Trash2 } from 'lucide-react';
+
 
 const STATUS_LIST = ['Hadir', 'Izin', 'Sakit', 'Alpha'];
 const statusColor = s => ({ Hadir: 'badge-success', Izin: 'badge-blue', Sakit: 'badge-warning', Alpha: 'badge-danger' }[s] || 'badge-gray');
@@ -21,12 +22,34 @@ export default function AbsensiPage() {
   const [confirm, setConfirm] = useState(null);
   const { addToast } = useToast();
 
+  const [loading, setLoading] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [mhsRes, jadwalRes, mkRes, absRes] = await Promise.all([
+        api.get('/mahasiswa'),
+        api.get('/jadwal'),
+        api.get('/mata-kuliah'),
+        api.get('/absensi'),
+      ]);
+      setMhsList(Array.isArray(mhsRes) ? mhsRes : []);
+      setJadwalList(Array.isArray(jadwalRes) ? jadwalRes : []);
+      setMkList(Array.isArray(mkRes) ? mkRes : []);
+      setData(Array.isArray(absRes) ? absRes : []);
+    } catch (err) {
+      console.error('Gagal memuat data absensi:', err);
+      addToast('Gagal memuat data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setMhsList(mahasiswaDB.getAll());
-    setJadwalList(jadwalDB.getAll());
-    setMkList(mataKuliahDB.getAll());
-    setData(absensiDB.getAll());
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   function getMhsName(id) { return mhsList.find(m => m.id === id)?.nama || '-'; }
   function getMkName(jadwalId) {
@@ -36,17 +59,30 @@ export default function AbsensiPage() {
 
   function openEdit(row) { setForm({ status_absensi: row.status_absensi, keterangan: row.keterangan || '' }); setEditId(row.id); setModal(true); }
 
-  function handleSave() {
-    absensiDB.update(editId, form);
-    setData(absensiDB.getAll());
-    setModal(false);
-    addToast('Absensi berhasil diperbarui');
+  async function handleSave() {
+    try {
+      await api.put(`/absensi/${editId}`, form);
+      setModal(false);
+      addToast('Absensi berhasil diperbarui');
+      await fetchData();
+    } catch (err) {
+      console.error('Gagal update absensi:', err);
+      addToast('Gagal menyimpan data', 'error');
+    }
   }
 
-  function handleDelete(id) {
-    absensiDB.delete(id); setData(absensiDB.getAll()); setConfirm(null);
-    addToast('Data absensi dihapus', 'error');
+  async function handleDelete(id) {
+    try {
+      await api.delete(`/absensi/${id}`);
+      setConfirm(null);
+      addToast('Data absensi dihapus', 'error');
+      await fetchData();
+    } catch (err) {
+      console.error('Gagal menghapus absensi:', err);
+      addToast('Gagal menghapus data', 'error');
+    }
   }
+
 
   const columns = [
     { key: 'mahasiswa_id', label: 'Mahasiswa', render: v => getMhsName(v) },
@@ -62,15 +98,31 @@ export default function AbsensiPage() {
       <div className="page-header">
         <div><h2>Data Absensi</h2><p>Kelola semua data absensi mahasiswa</p></div>
       </div>
-      <div className="card">
-        <DataTable columns={columns} data={data} searchKeys={['tanggal', 'status_absensi']}
-          actions={row => (<>
-            <button className="btn btn-icon" title="Edit" onClick={() => openEdit(row)}><Pencil size={15} /></button>
-            <button className="btn btn-icon" title="Hapus" style={{ color: '#ef4444' }} onClick={() => setConfirm(row.id)}><Trash2 size={15} /></button>
-          </>)} />
-      </div>
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: 24, color: '#64748b' }}>
+          Memuat data...
+        </div>
+      )}
+      {!loading && (
+        <div className="card">
+          <DataTable
+            columns={columns}
+            data={data}
+            searchKeys={['tanggal', 'status_absensi']}
+            actions={row => (
+              <>
+                <button className="btn btn-icon" title="Edit" onClick={() => openEdit(row)}><Pencil size={15} /></button>
+                <button className="btn btn-icon" title="Hapus" style={{ color: '#ef4444' }} onClick={() => setConfirm(row.id)}><Trash2 size={15} /></button>
+              </>
+            )}
+          />
+        </div>
+      )}
+
       {modal && (
+
         <Modal title="Edit Absensi" onClose={() => setModal(false)}>
+
           <div className="modal-body">
             <div className="form-group" style={{ marginBottom: 14 }}>
               <label style={{ fontSize: '0.82rem', fontWeight: 500, display: 'block', marginBottom: 6 }}>Status Absensi</label>

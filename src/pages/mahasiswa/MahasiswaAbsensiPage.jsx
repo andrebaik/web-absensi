@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
-import { jadwalDB, mataKuliahDB, absensiDB } from '../../data/mockDatabase';
+
 import { useToast } from '../../context/ToastContext';
+import { api } from '../../api/client';
 
 const STATUS_LIST = ['Hadir', 'Izin', 'Sakit', 'Alpha'];
 
 export default function MahasiswaAbsensiPage() {
   const { profile } = useAuth();
+
   const [jadwalList, setJadwalList] = useState([]);
   const [selectedJadwal, setSelectedJadwal] = useState('');
   const [pertemuan, setPertemuan] = useState(1);
@@ -18,33 +20,83 @@ export default function MahasiswaAbsensiPage() {
   const { addToast } = useToast();
 
   useEffect(() => {
-    if (!profile) return;
-    const mks = mataKuliahDB.getAll();
-    const jadwal = jadwalDB.getByKelas(profile.kelas);
-    const enriched = jadwal.map(j => ({ ...j, mk_nama: mks.find(m => m.id === j.mata_kuliah_id)?.nama_mk || '-' }));
-    setJadwalList(enriched);
-    if (enriched.length > 0) setSelectedJadwal(String(enriched[0].id));
+    if (!profile?.id) return;
+
+    (async () => {
+      try {
+        const [mks, jadwal] = await Promise.all([
+          api.get('/mata-kuliah', profile.token),
+          // backend menyediakan get jadwal per kelas
+          api.get(`/jadwal/kelas/${profile.kelas}`, profile.token),
+        ]);
+
+        const mkById = new Map((Array.isArray(mks) ? mks : []).map(m => [m.id, m.nama_mk]));
+        const jList = (Array.isArray(jadwal) ? jadwal : []).map(j => ({
+          ...j,
+          mk_nama: mkById.get(j.mata_kuliah_id) || '-',
+        }));
+
+        setJadwalList(jList);
+        if (jList.length > 0) setSelectedJadwal(String(jList[0].id));
+      } catch {
+        addToast('Gagal memuat jadwal', 'error');
+      }
+    })();
   }, [profile]);
 
   useEffect(() => {
     checkExisting();
   }, [selectedJadwal, pertemuan, profile]);
 
-  function checkExisting() {
-    if (!selectedJadwal || !profile) return;
-    const existing = absensiDB.getByJadwalAndPertemuan(Number(selectedJadwal), Number(pertemuan));
-    const myEntry = existing.find(a => a.mahasiswa_id === profile.id);
-    if (myEntry) { setAlreadySubmitted(true); setStatus(myEntry.status_absensi); setKeterangan(myEntry.keterangan || ''); }
-    else { setAlreadySubmitted(false); setStatus('Hadir'); setKeterangan(''); }
+  async function checkExisting() {
+    if (!selectedJadwal || !profile?.id) return;
+
+    try {
+      const existing = await api.get(
+        `/absensi/jadwal/${Number(selectedJadwal)}/pertemuan/${Number(pertemuan)}`,
+        profile.token
+      );
+
+      const myEntry = (Array.isArray(existing) ? existing : []).find(a => a.mahasiswa_id === profile.id);
+      if (myEntry) {
+        setAlreadySubmitted(true);
+        setStatus(myEntry.status_absensi);
+        setKeterangan(myEntry.keterangan || '');
+      } else {
+        setAlreadySubmitted(false);
+        setStatus('Hadir');
+        setKeterangan('');
+      }
+    } catch {
+      // biarkan state default
+    }
   }
 
-  function handleSubmit() {
-    if (!selectedJadwal || !profile) return;
+  async function handleSubmit() {
+    if (!selectedJadwal || !profile?.id) return;
     if (alreadySubmitted) { addToast('Absensi pertemuan ini sudah direkam', 'warning'); return; }
-    absensiDB.create({ jadwal_id: Number(selectedJadwal), mahasiswa_id: profile.id, tanggal, pertemuan_ke: Number(pertemuan), status_absensi: status, keterangan });
-    addToast('Absensi berhasil disimpan');
-    setAlreadySubmitted(true);
+
+    try {
+      await api.post(
+        '/absensi',
+        {
+          jadwal_id: Number(selectedJadwal),
+          mahasiswa_id: profile.id,
+          tanggal,
+          pertemuan_ke: Number(pertemuan),
+          status_absensi: status,
+          keterangan,
+        },
+        profile.token
+      );
+
+      addToast('Absensi berhasil disimpan');
+      setAlreadySubmitted(true);
+    } catch {
+      addToast('Gagal menyimpan absensi', 'error');
+    }
   }
+
 
   return (
     <DashboardLayout title="Input Absensi">

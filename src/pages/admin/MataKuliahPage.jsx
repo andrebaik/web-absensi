@@ -3,9 +3,11 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { mataKuliahDB } from '../../data/mockDatabase';
+
 import { useToast } from '../../context/ToastContext';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { api } from '../../api/client';
+
 
 const emptyForm = { kode_mk: '', nama_mk: '', sks: 3, semester: 1, prodi: '' };
 const PRODI = ['Teknik Informatika', 'Sistem Informasi', 'Manajemen Informatika'];
@@ -19,7 +21,25 @@ export default function MataKuliahPage() {
   const [confirm, setConfirm] = useState(null);
   const { addToast } = useToast();
 
-  useEffect(() => { setData(mataKuliahDB.getAll()); }, []);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get('/mata-kuliah');
+        setData(Array.isArray(res) ? res : []);
+      } catch (err) {
+        console.error('Gagal mengambil data mata kuliah:', err);
+        addToast('Gagal memuat data', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [addToast]);
+
 
   function validate() {
     const e = {};
@@ -34,18 +54,52 @@ export default function MataKuliahPage() {
   function openAdd() { setForm(emptyForm); setEditId(null); setErrors({}); setModal(true); }
   function openEdit(row) { setForm({ ...row }); setEditId(row.id); setErrors({}); setModal(true); }
 
-  function handleSave() {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    if (editId) { mataKuliahDB.update(editId, form); addToast('Mata kuliah berhasil diperbarui'); }
-    else { mataKuliahDB.create(form); addToast('Mata kuliah berhasil ditambahkan'); }
-    setData(mataKuliahDB.getAll()); setModal(false);
+  async function fetchData() {
+    setLoading(true);
+    try {
+      const res = await api.get('/mata-kuliah');
+      setData(Array.isArray(res) ? res : []);
+    } catch (err) {
+      console.error('Gagal mengambil data mata kuliah:', err);
+      addToast('Gagal memuat data', 'error');
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleDelete(id) {
-    mataKuliahDB.delete(id); setData(mataKuliahDB.getAll()); setConfirm(null);
-    addToast('Mata kuliah berhasil dihapus', 'error');
+
+  async function handleSave() {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+
+    try {
+      if (editId) {
+        await api.put(`/mata-kuliah/${editId}`, form);
+        addToast('Mata kuliah berhasil diperbarui');
+      } else {
+        await api.post('/mata-kuliah', form);
+        addToast('Mata kuliah berhasil ditambahkan');
+      }
+      await fetchData();
+      setModal(false);
+    } catch (err) {
+      console.error('Gagal menyimpan mata kuliah:', err);
+      addToast('Gagal menyimpan data', 'error');
+    }
   }
+
+  async function handleDelete(id) {
+    try {
+      await api.delete(`/mata-kuliah/${id}`);
+      setConfirm(null);
+      addToast('Mata kuliah berhasil dihapus', 'error');
+      await fetchData();
+    } catch (err) {
+      console.error('Gagal menghapus mata kuliah:', err);
+      addToast('Gagal menghapus data', 'error');
+    }
+  }
+
 
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -70,7 +124,12 @@ export default function MataKuliahPage() {
             <button className="btn btn-icon" style={{ color: '#ef4444' }} onClick={() => setConfirm(row.id)}><Trash2 size={15} /></button>
           </>)} />
       </div>
-      {modal && (
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 16, color: '#64748b' }}>Memuat...</div>
+      )}
+
+      {!loading && modal && (
+
         <Modal title={editId ? 'Edit Mata Kuliah' : 'Tambah Mata Kuliah'} onClose={() => setModal(false)}>
           <div className="modal-body">
             <div className="form-grid">

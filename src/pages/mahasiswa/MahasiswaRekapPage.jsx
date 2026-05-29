@@ -1,16 +1,27 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
-import { absensiDB } from '../../data/mockDatabase';
+import { api } from '../../api/client';
+
+
 
 export default function MahasiswaRekapPage() {
   const { profile } = useAuth();
   const [rekap, setRekap] = useState([]);
 
   useEffect(() => {
-    if (!profile) return;
-    setRekap(absensiDB.getRekapByMahasiswa(profile.id));
+    if (!profile?.id) return;
+
+    (async () => {
+      try {
+        const res = await api.get(`/absensi/rekap/mahasiswa/${profile.id}`, profile.token);
+        setRekap(Array.isArray(res) ? res : []);
+      } catch {
+        // biarkan rekap kosong
+      }
+    })();
   }, [profile]);
+
 
   const barColor = p => p >= 75 ? '#10b981' : p >= 50 ? '#f59e0b' : '#ef4444';
 

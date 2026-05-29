@@ -3,9 +3,11 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { ruanganDB } from '../../data/mockDatabase';
+
 import { useToast } from '../../context/ToastContext';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { api } from '../../api/client';
+
 
 const emptyForm = { kode_ruangan: '', nama_ruangan: '', kapasitas: 30, lokasi: '', status: 'Tersedia' };
 const STATUS = ['Tersedia', 'Tidak Tersedia', 'Dalam Perbaikan'];
@@ -19,7 +21,25 @@ export default function RuanganPage() {
   const [confirm, setConfirm] = useState(null);
   const { addToast } = useToast();
 
-  useEffect(() => { setData(ruanganDB.getAll()); }, []);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get('/ruangan');
+        setData(Array.isArray(res) ? res : []);
+      } catch (err) {
+        console.error('Gagal mengambil data ruangan:', err);
+        addToast('Gagal memuat data', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [addToast]);
+
 
   function validate() {
     const e = {};
@@ -33,18 +53,51 @@ export default function RuanganPage() {
   function openAdd() { setForm(emptyForm); setEditId(null); setErrors({}); setModal(true); }
   function openEdit(row) { setForm({ ...row }); setEditId(row.id); setErrors({}); setModal(true); }
 
-  function handleSave() {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/ruangan');
+      setData(Array.isArray(res) ? res : []);
+    } catch (err) {
+      console.error('Gagal mengambil data ruangan:', err);
+      addToast('Gagal memuat data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  async function handleSave() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    if (editId) { ruanganDB.update(editId, form); addToast('Ruangan berhasil diperbarui'); }
-    else { ruanganDB.create(form); addToast('Ruangan berhasil ditambahkan'); }
-    setData(ruanganDB.getAll()); setModal(false);
+
+    try {
+      if (editId) {
+        await api.put(`/ruangan/${editId}`, form);
+        addToast('Ruangan berhasil diperbarui');
+      } else {
+        await api.post('/ruangan', form);
+        addToast('Ruangan berhasil ditambahkan');
+      }
+      await fetchData();
+      setModal(false);
+    } catch (err) {
+      console.error('Gagal menyimpan ruangan:', err);
+      addToast('Gagal menyimpan data', 'error');
+    }
   }
 
-  function handleDelete(id) {
-    ruanganDB.delete(id); setData(ruanganDB.getAll()); setConfirm(null);
-    addToast('Ruangan berhasil dihapus', 'error');
+  async function handleDelete(id) {
+    try {
+      await api.delete(`/ruangan/${id}`);
+      setConfirm(null);
+      addToast('Ruangan berhasil dihapus', 'error');
+      await fetchData();
+    } catch (err) {
+      console.error('Gagal menghapus ruangan:', err);
+      addToast('Gagal menghapus data', 'error');
+    }
   }
+
 
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const statusColor = v => v === 'Tersedia' ? 'badge-success' : v === 'Dalam Perbaikan' ? 'badge-warning' : 'badge-danger';

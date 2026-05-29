@@ -1,49 +1,26 @@
-# TODO - Integrasi Frontend -> Backend -> MySQL
+# TODO - Replace mockDatabase with backend API
 
-## Step 1: Fix AuthContext (hilangkan apiFetch is not defined)
-- [x] Ganti semua penggunaan `apiFetch` di `src/context/AuthContext.jsx` menjadi `api.get/post/...` dari `src/api/client.js`
-- [x] Pastikan login memanggil `POST /api/auth/login`
-- [x] Setelah login simpan user+token ke `sessionStorage` key `asinetkw_user`
-- [ ] Pastikan load profile pakai endpoint yang sesuai
+## Task
+Ganti penggunaan `mockDatabase` pada file-file yang terdeteksi dengan pemanggilan backend Express/MySQL via `src/api/client.js`. Setelah CRUD, fetch ulang data. Jangan ubah desain UI.
 
+## Files yang harus diubah
+- src/pages/auth/ForgotPasswordPage.jsx
+- src/pages/admin/BackupPage.jsx
+- src/pages/admin/RekapAbsensiPage.jsx
+- src/pages/dosen/DosenJadwalPage.jsx
+- src/pages/dosen/DosenRekapPage.jsx
 
-## Step 2: Perbaiki DB config backend agar DB_PASSWORD boleh kosong (XAMPP root)
-- [x] Edit `backend/config/db.js` agar tidak mewajibkan DB_PASSWORD
-- [ ] Pastikan mysql2/promise dan pool setup benar
-
-
-## Step 3: Hilangkan mockDatabase/localStorage untuk data utama (ganti ke API)
-- [ ] Update halaman admin:
-  - [ ] src/pages/admin/DosenPage.jsx
-  - [ ] src/pages/admin/MataKuliahPage.jsx
-  - [ ] src/pages/admin/RuanganPage.jsx
-  - [ ] src/pages/admin/JadwalPage.jsx
-  - [ ] src/pages/admin/AbsensiPage.jsx
-  - [ ] src/pages/admin/RekapAbsensiPage.jsx
-  - [ ] src/pages/admin/HakAksesPage.jsx
-  - [ ] src/pages/admin/BackupPage.jsx
-  - [ ] src/pages/admin/AdminDashboard.jsx
-- [ ] Update halaman dosen:
-  - [ ] src/pages/dosen/DosenDashboard.jsx
-  - [ ] src/pages/dosen/DosenJadwalPage.jsx
-  - [ ] src/pages/dosen/DosenMahasiswaPage.jsx
-  - [ ] src/pages/dosen/DosenAbsensiPage.jsx
-  - [ ] src/pages/dosen/DosenRekapPage.jsx
-- [ ] Update halaman mahasiswa:
-  - [ ] src/pages/mahasiswa/MahasiswaDashboard.jsx
-  - [ ] src/pages/mahasiswa/MahasiswaAbsensiPage.jsx
-  - [ ] src/pages/mahasiswa/MahasiswaRekapPage.jsx
-
-## Step 4: Update API helper (konsisten token + base URL)
-- [ ] Cek `src/api/client.js` (konsisten pakai api.del vs api.delete)
-- [ ] Pastikan semua halaman memakai helper ini
-
-## Step 5: README & konfigurasi run
-- [ ] Pastikan `.env` instruksi untuk backend lengkap (JWT_SECRET, JWT_EXPIRES_IN, DB_PASSWORD boleh kosong)
-- [ ] Update README: cara import schema.sql, seed, akun login default
-
-## Step 6: Verifikasi
-- [ ] Jalankan backend + seed
-- [ ] Jalankan frontend dan tes login
-- [ ] Tes CRUD mahasiswa/dosen/mata kuliah/ruangan/jadwal/absensi
+## Step plan
+1. [x] Identifikasi endpoint yang dibutuhkan dari backend routes:
+   - /auth/forgot-password
+   - /backupLog
+   - /mahasiswa, /dosen, /mata_kuliah, /ruangan, /jadwal
+   - /absensi untuk rekap admin/dosen
+2. [ ] Ubah ForgotPasswordPage: ganti `authDB` mock menjadi POST `/auth/forgot-password`.
+3. [ ] Ubah BackupPage: ganti sumber data ekspor dari endpoint GET masing-masing tabel + log backup dari GET `/backupLog`.
+4. [ ] Ubah RekapAbsensiPage: ganti perhitungan rekap dengan GET `/absensi/rekap/admin` (kalau bentuk data match; jika tidak, lakukan pemetaan tetap tanpa ubah UI).
+5. [ ] Ubah DosenJadwalPage: ganti list jadwal + join mk/ruangan dari endpoint GET `/jadwal/dosen/:id` dan /mata_kuliah, /ruangan.
+6. [ ] Ubah DosenRekapPage: ganti rekap dengan GET `/absensi/rekap/dosen/:dosenId` atau komposisi dari endpoint yang ada.
+7. [ ] Pastikan setelah create/update/delete dilakukan fetch ulang (untuk halaman ini: Backup hanya create log; rekap/jadwal hanya read).
+8. [ ] Jalankan build/lint/dev untuk validasi.
 

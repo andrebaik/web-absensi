@@ -1,20 +1,27 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { authDB } from '../../data/mockDatabase';
 import { ArrowLeft } from 'lucide-react';
+import { api } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ForgotPasswordPage() {
+  const { user } = useAuth();
   const [email, setEmail] = useState('');
+
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     if (!email) { setError('Email wajib diisi.'); return; }
-    const user = authDB.findByEmail(email);
-    if (!user) { setError('Email tidak ditemukan dalam sistem.'); return; }
-    setSent(true);
+    try {
+      // backend saat ini hanya placeholder untuk demo
+      await api.post('/auth/forgot-password', { email }, user?.token);
+      setSent(true);
+    } catch (e) {
+      setError(e.message || 'Gagal mengirim permintaan reset password');
+    }
   }
 
   return (

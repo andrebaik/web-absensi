@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
-import { jadwalDB, mahasiswaDB, absensiDB, mataKuliahDB } from '../../data/mockDatabase';
+
 import { useToast } from '../../context/ToastContext';
+import { api } from '../../api/client';
+
 import Modal from '../../components/common/Modal';
 import { Pencil } from 'lucide-react';
 
@@ -24,51 +26,115 @@ export default function DosenAbsensiPage() {
   const { addToast } = useToast();
 
   useEffect(() => {
-    if (!profile) return;
-    const mks = mataKuliahDB.getAll();
-    setMkList(mks);
-    const jadwal = jadwalDB.getByDosen(profile.id);
-    setJadwalList(jadwal.map(j => ({ ...j, mk_nama: mks.find(m => m.id === j.mata_kuliah_id)?.nama_mk || '-' })));
-    if (jadwal.length > 0) setSelectedJadwal(String(jadwal[0].id));
+    if (!profile?.id) return;
+
+    (async () => {
+      try {
+        // ambil mk agar bisa join nama mk untuk UI
+        const [mks, jadwal] = await Promise.all([
+          api.get('/mata-kuliah', profile.token),
+          api.get(`/jadwal/dosen/${profile.id}`, profile.token),
+        ]);
+
+        setMkList(Array.isArray(mks) ? mks : []);
+        const mkById = new Map((Array.isArray(mks) ? mks : []).map(m => [m.id, m.nama_mk]));
+
+        const jList = (Array.isArray(jadwal) ? jadwal : []).map(j => ({
+          ...j,
+          mk_nama: mkById.get(j.mata_kuliah_id) || '-',
+        }));
+
+        setJadwalList(jList);
+        if (jList.length > 0) setSelectedJadwal(String(jList[0].id));
+      } catch {
+        addToast('Gagal memuat jadwal mengajar', 'error');
+      }
+    })();
   }, [profile]);
+
 
   useEffect(() => {
     if (!selectedJadwal) return;
+
     const jId = Number(selectedJadwal);
     const jadwal = jadwalList.find(j => j.id === jId);
-    if (!jadwal) return;
-    const mhs = mahasiswaDB.getAll().filter(m => m.kelas === jadwal.kelas);
-    setMahasiswaList(mhs);
-    loadAbsensi(jId, pertemuan);
-  }, [selectedJadwal, jadwalList]);
+    if (!jadwal?.kelas) return;
 
-  function loadAbsensi(jadwalId, prt) {
-    const existing = absensiDB.getByJadwalAndPertemuan(jadwalId, prt);
-    setExistingAbsensi(existing);
-    const map = {};
-    existing.forEach(a => { map[a.mahasiswa_id] = { status: a.status_absensi, keterangan: a.keterangan }; });
-    setAbsensiMap(map);
+    (async () => {
+      try {
+        const mhsRes = await api.get('/mahasiswa', profile?.token);
+        const mhs = (Array.isArray(mhsRes) ? mhsRes : []).filter(m => m.kelas === jadwal.kelas);
+        setMahasiswaList(mhs);
+        await loadAbsensi(jId, pertemuan);
+      } catch {
+        addToast('Gagal memuat daftar mahasiswa', 'error');
+      }
+    })();
+  }, [selectedJadwal, jadwalList, pertemuan, profile]);
+
+  async function loadAbsensi(jadwalId, prt) {
+    try {
+      // endpoint: GET /absensi/jadwal/:jadwalId/pertemuan/:pertemuan
+      const existing = await api.get(`/absensi/jadwal/${jadwalId}/pertemuan/${prt}`, profile?.token);
+      setExistingAbsensi(Array.isArray(existing) ? existing : []);
+      const map = {};
+      (Array.isArray(existing) ? existing : []).forEach(a => {
+        map[a.mahasiswa_id] = { status: a.status_absensi, keterangan: a.keterangan };
+      });
+      setAbsensiMap(map);
+    } catch {
+      addToast('Gagal memuat absensi', 'error');
+    }
   }
+
 
   function handleChangeStatus(mhsId, status) {
     setAbsensiMap(prev => ({ ...prev, [mhsId]: { ...prev[mhsId], status, keterangan: prev[mhsId]?.keterangan || '' } }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     const jId = Number(selectedJadwal);
-    mahasiswaList.forEach(mhs => {
-      const s = absensiMap[mhs.id]?.status || 'Alpha';
-      const ket = absensiMap[mhs.id]?.keterangan || '';
-      const existing = existingAbsensi.find(a => a.mahasiswa_id === mhs.id);
-      if (existing) {
-        absensiDB.update(existing.id, { status_absensi: s, keterangan: ket });
-      } else {
-        absensiDB.create({ jadwal_id: jId, mahasiswa_id: mhs.id, tanggal, pertemuan_ke: Number(pertemuan), status_absensi: s, keterangan: ket });
-      }
-    });
-    addToast('Absensi berhasil disimpan');
-    loadAbsensi(jId, Number(pertemuan));
+    if (!jId) return;
+
+    try {
+      // existingAbsensi diisi dari endpoint rekap absensi per pertemuan
+      // Untuk update/insert: update jika sudah ada, selain itu create.
+      const existingByMhs = new Map(
+        (Array.isArray(existingAbsensi) ? existingAbsensi : []).map(a => [a.mahasiswa_id, a])
+      );
+
+      await Promise.all(
+        mahasiswaList.map(async mhs => {
+          const s = absensiMap[mhs.id]?.status || 'Alpha';
+          const ket = absensiMap[mhs.id]?.keterangan || '';
+          const existing = existingByMhs.get(mhs.id);
+
+          if (existing?.id) {
+            await api.put(`/absensi/${existing.id}`, { status_absensi: s, keterangan: ket }, profile?.token);
+          } else {
+            await api.post(
+              '/absensi',
+              {
+                jadwal_id: jId,
+                mahasiswa_id: mhs.id,
+                tanggal,
+                pertemuan_ke: Number(pertemuan),
+                status_absensi: s,
+                keterangan: ket,
+              },
+              profile?.token
+            );
+          }
+        })
+      );
+
+      addToast('Absensi berhasil disimpan');
+      await loadAbsensi(jId, Number(pertemuan));
+    } catch {
+      addToast('Gagal menyimpan absensi', 'error');
+    }
   }
+
 
   function openEdit(mhsId) {
     const cur = absensiMap[mhsId] || { status: 'Alpha', keterangan: '' };
@@ -76,14 +142,43 @@ export default function DosenAbsensiPage() {
     setEditModal(mhsId);
   }
 
-  function handleEditSave() {
+  async function handleEditSave() {
     const mhsId = editModal;
-    setAbsensiMap(prev => ({ ...prev, [mhsId]: { status: editForm.status_absensi, keterangan: editForm.keterangan } }));
-    const existing = existingAbsensi.find(a => a.mahasiswa_id === mhsId);
-    if (existing) absensiDB.update(existing.id, { status_absensi: editForm.status_absensi, keterangan: editForm.keterangan });
-    setEditModal(null);
-    addToast('Absensi diperbarui');
+    if (!mhsId) return;
+
+    try {
+      setAbsensiMap(prev => ({ ...prev, [mhsId]: { status: editForm.status_absensi, keterangan: editForm.keterangan } }));
+
+      const existing = (Array.isArray(existingAbsensi) ? existingAbsensi : []).find(a => a.mahasiswa_id === mhsId);
+      if (existing?.id) {
+        await api.put(`/absensi/${existing.id}`, {
+          status_absensi: editForm.status_absensi,
+          keterangan: editForm.keterangan,
+        }, profile?.token);
+      } else {
+        // jika belum ada record absensi untuk mahasiswa tsb pada pertemuan ini
+        await api.post(
+          '/absensi',
+          {
+            jadwal_id: Number(selectedJadwal),
+            mahasiswa_id: mhsId,
+            tanggal,
+            pertemuan_ke: Number(pertemuan),
+            status_absensi: editForm.status_absensi,
+            keterangan: editForm.keterangan,
+          },
+          profile?.token
+        );
+      }
+
+      setEditModal(null);
+      addToast('Absensi diperbarui');
+      await loadAbsensi(Number(selectedJadwal), Number(pertemuan));
+    } catch {
+      addToast('Gagal memperbarui absensi', 'error');
+    }
   }
+
 
   return (
     <DashboardLayout title="Input Absensi">

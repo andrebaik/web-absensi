@@ -32,5 +32,8 @@ export const api = {
   post: (path, body, token) => apiFetch(path, { method: 'POST', body, token }),
   put: (path, body, token) => apiFetch(path, { method: 'PUT', body, token }),
   del: (path, token) => apiFetch(path, { method: 'DELETE', token }),
+  // alias agar sesuai pola penulisan yang diinginkan
+  delete: (path, token) => apiFetch(path, { method: 'DELETE', token }),
 };
+
 
