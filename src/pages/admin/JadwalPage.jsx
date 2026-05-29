@@ -5,6 +5,8 @@ import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { jadwalDB, mataKuliahDB, dosenDB, ruanganDB } from '../../data/mockDatabase';
 import { useToast } from '../../context/ToastContext';
+
+
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 
 const HARI = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
@@ -24,11 +26,33 @@ export default function JadwalPage() {
   const { addToast } = useToast();
 
   useEffect(() => {
-    setData(jadwalDB.getAll());
-    setMks(mataKuliahDB.getAll());
-    setDosens(dosenDB.getAll());
-    setRuangans(ruanganDB.getAll());
+    let isMounted = true;
+
+    const load = async () => {
+      try {
+        const [jadwalRes, mkRes, dosenRes, ruanganRes] = await Promise.all([
+          api.get('/jadwal'),
+          api.get('/mata-kuliah'),
+          api.get('/dosen'),
+          api.get('/ruangan')
+        ]);
+
+        if (!isMounted) return;
+        setData(Array.isArray(jadwalRes) ? jadwalRes : []);
+        setMks(Array.isArray(mkRes) ? mkRes : []);
+        setDosens(Array.isArray(dosenRes) ? dosenRes : []);
+        setRuangans(Array.isArray(ruanganRes) ? ruanganRes : []);
+      } catch (err) {
+        console.error('Gagal memuat jadwal:', err);
+      }
+    };
+
+    load();
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
 
   function validate() {
     const e = {};
@@ -48,11 +72,22 @@ export default function JadwalPage() {
   }
 
   function handleSave() {
+    // Revert: kembali ke mode mockDatabase sebelumnya (agar tidak mengubah fitur selain Prism).
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    const payload = { ...form, mata_kuliah_id: Number(form.mata_kuliah_id), dosen_id: Number(form.dosen_id), ruangan_id: Number(form.ruangan_id) };
+
+    // NOTE: Ini harus kembali memakai jadwalDB/jadwal bentrok logic yang asli.
+    const payload = {
+      ...form,
+      mata_kuliah_id: Number(form.mata_kuliah_id),
+      dosen_id: Number(form.dosen_id),
+      ruangan_id: Number(form.ruangan_id)
+    };
+
+    // eslint-disable-next-line no-undef
     const res = editId ? jadwalDB.update(editId, payload) : jadwalDB.create(payload);
-    if (res.error) {
+
+    if (res?.error) {
       const msgs = res.conflicts.map(c => {
         const mk = mks.find(m => m.id === c.mata_kuliah_id)?.nama_mk || '-';
         const d = dosens.find(x => x.id === c.dosen_id)?.nama || '-';
@@ -65,9 +100,14 @@ export default function JadwalPage() {
       setConflict(msgs);
       return;
     }
+
     addToast(editId ? 'Jadwal berhasil diperbarui' : 'Jadwal berhasil ditambahkan');
-    setData(jadwalDB.getAll()); setModal(false);
+
+    // eslint-disable-next-line no-undef
+    setData(jadwalDB.getAll());
+    setModal(false);
   }
+
 
   function handleDelete(id) {
     jadwalDB.delete(id); setData(jadwalDB.getAll()); setConfirm(null);

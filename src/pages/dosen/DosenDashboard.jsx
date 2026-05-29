@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import StatCard from '../../components/common/StatCard';
 import { useAuth } from '../../context/AuthContext';
-import { jadwalDB, mataKuliahDB, ruanganDB, absensiDB, mahasiswaDB } from '../../data/mockDatabase';
+import { api } from '../../api/client';
+
 import { Calendar, ClipboardList, Users, BarChart2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -14,23 +15,63 @@ export default function DosenDashboard() {
 
   useEffect(() => {
     if (!profile) return;
-    const mks = mataKuliahDB.getAll();
-    const ruangans = ruanganDB.getAll();
-    const jadwal = jadwalDB.getByDosen(profile.id);
-    const enriched = jadwal.map(j => ({
-      ...j,
-      mk_nama: mks.find(m => m.id === j.mata_kuliah_id)?.nama_mk || '-',
-      ruangan_nama: ruangans.find(r => r.id === j.ruangan_id)?.nama_ruangan || '-',
-    }));
-    setJadwalList(enriched);
-    setMkList(mks);
 
-    const allMhs = mahasiswaDB.getAll();
-    const kelas = [...new Set(jadwal.map(j => j.kelas))];
-    const mhsCount = allMhs.filter(m => kelas.includes(m.kelas)).length;
-    const absCount = absensiDB.getAll().filter(a => jadwal.some(j => j.id === a.jadwal_id)).length;
-    setStats({ jadwal: jadwal.length, absensi: absCount, mahasiswa: mhsCount });
+    let isMounted = true;
+    const load = async () => {
+      try {
+        const [
+          jadwal,
+          mahasiswa,
+          mataKuliah,
+          ruangan,
+          absensi
+        ] = await Promise.all([
+          api.get(`/jadwal?dosen_id=${profile.id}`),
+          api.get('/mahasiswa'),
+          api.get('/mata-kuliah'),
+          api.get('/ruangan'),
+          api.get('/absensi')
+        ]);
+
+        if (!isMounted) return;
+
+        const ruangById = (Array.isArray(ruangan) ? ruangan : []).reduce((acc, r) => {
+          acc[r.id] = r;
+          return acc;
+        }, {});
+
+        const mkById = (Array.isArray(mataKuliah) ? mataKuliah : []).reduce((acc, m) => {
+          acc[m.id] = m;
+          return acc;
+        }, {});
+
+        const enriched = (Array.isArray(jadwal) ? jadwal : []).map(j => ({
+          ...j,
+          mk_nama: mkById?.[j.mata_kuliah_id]?.nama_mk || '-',
+          ruangan_nama: ruangById?.[j.ruangan_id]?.nama_ruangan || '-',
+        }));
+
+        setJadwalList(enriched);
+        setMkList(Array.isArray(mataKuliah) ? mataKuliah : []);
+
+        const kelas = [...new Set(enriched.map(j => j.kelas))];
+        const mhsCount = (Array.isArray(mahasiswa) ? mahasiswa : []).filter(m => kelas.includes(m.kelas)).length;
+
+        const jadwalIds = new Set(enriched.map(j => j.id));
+        const absCount = (Array.isArray(absensi) ? absensi : []).filter(a => jadwalIds.has(a.jadwal_id)).length;
+
+        setStats({ jadwal: enriched.length, absensi: absCount, mahasiswa: mhsCount });
+      } catch (err) {
+        console.error('Gagal memuat dashboard dosen:', err);
+      }
+    };
+
+    load();
+    return () => {
+      isMounted = false;
+    };
   }, [profile]);
+
 
   const quickLinks = [
     { to: '/dosen/jadwal', label: 'Jadwal Mengajar', icon: Calendar },

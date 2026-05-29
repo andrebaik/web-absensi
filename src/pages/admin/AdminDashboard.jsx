@@ -1,23 +1,55 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import StatCard from '../../components/common/StatCard';
-import { mahasiswaDB, dosenDB, mataKuliahDB, ruanganDB, jadwalDB, absensiDB } from '../../data/mockDatabase';
+import { api } from '../../api/client';
 import { GraduationCap, Users, BookOpen, Building2, Calendar, ClipboardList } from 'lucide-react';
+
 import { Link } from 'react-router-dom';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ mhs: 0, dosen: 0, mk: 0, ruangan: 0, jadwal: 0, absensi: 0 });
 
   useEffect(() => {
-    setStats({
-      mhs: mahasiswaDB.getAll().length,
-      dosen: dosenDB.getAll().length,
-      mk: mataKuliahDB.getAll().length,
-      ruangan: ruanganDB.getAll().length,
-      jadwal: jadwalDB.getAll().length,
-      absensi: absensiDB.getAll().length,
-    });
+    let isMounted = true;
+
+    const loadStats = async () => {
+      try {
+        const [
+          mahasiswa,
+          dosen,
+          mataKuliah,
+          ruangan,
+          jadwal,
+          absensi
+        ] = await Promise.all([
+          api.get('/mahasiswa'),
+          api.get('/dosen'),
+          api.get('/mata-kuliah'),
+          api.get('/ruangan'),
+          api.get('/jadwal'),
+          api.get('/absensi'),
+        ]);
+
+        if (!isMounted) return;
+        setStats({
+          mhs: Array.isArray(mahasiswa) ? mahasiswa.length : 0,
+          dosen: Array.isArray(dosen) ? dosen.length : 0,
+          mk: Array.isArray(mataKuliah) ? mataKuliah.length : 0,
+          ruangan: Array.isArray(ruangan) ? ruangan.length : 0,
+          jadwal: Array.isArray(jadwal) ? jadwal.length : 0,
+          absensi: Array.isArray(absensi) ? absensi.length : 0,
+        });
+      } catch (err) {
+        console.error('Gagal mengambil statistik dashboard:', err);
+      }
+    };
+
+    loadStats();
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
 
   const quickLinks = [
     { to: '/admin/mahasiswa', label: 'Kelola Mahasiswa', desc: 'Tambah, edit, hapus data mahasiswa', icon: GraduationCap },

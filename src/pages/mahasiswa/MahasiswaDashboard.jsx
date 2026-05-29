@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import StatCard from '../../components/common/StatCard';
 import { useAuth } from '../../context/AuthContext';
-import { jadwalDB, mataKuliahDB, ruanganDB, absensiDB } from '../../data/mockDatabase';
+import { api } from '../../api/client';
+
 import { Calendar, ClipboardList, BarChart2, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -13,14 +14,65 @@ export default function MahasiswaDashboard() {
 
   useEffect(() => {
     if (!profile) return;
-    const mks = mataKuliahDB.getAll();
-    const ruangans = ruanganDB.getAll();
-    const jadwal = jadwalDB.getByKelas(profile.kelas);
-    setJadwalList(jadwal.map(j => ({ ...j, mk_nama: mks.find(m => m.id === j.mata_kuliah_id)?.nama_mk || '-', ruangan_nama: ruangans.find(r => r.id === j.ruangan_id)?.nama_ruangan || '-' })));
-    const abs = absensiDB.getByMahasiswa(profile.id);
-    const hadir = abs.filter(a => a.status_absensi === 'Hadir').length;
-    setRekap({ hadir, total: abs.length, pct: abs.length ? Math.round((hadir / abs.length) * 100) : 0 });
+
+    let isMounted = true;
+
+    const load = async () => {
+      try {
+        const [
+          mataKuliah,
+          ruangan,
+          jadwal,
+          absensi,
+        ] = await Promise.all([
+          api.get('/mata-kuliah'),
+          api.get('/ruangan'),
+          api.get(`/jadwal?kelas=${encodeURIComponent(profile.kelas)}`),
+          api.get('/absensi'),
+        ]);
+
+        if (!isMounted) return;
+
+        const ruangById = (Array.isArray(ruangan) ? ruangan : []).reduce((acc, r) => {
+          acc[r.id] = r;
+          return acc;
+        }, {});
+
+        const mkById = (Array.isArray(mataKuliah) ? mataKuliah : []).reduce((acc, m) => {
+          acc[m.id] = m;
+          return acc;
+        }, {});
+
+        const jadwalKelas = Array.isArray(jadwal) ? jadwal : [];
+
+        const enriched = jadwalKelas.map(j => ({
+          ...j,
+          mk_nama: mkById?.[j.mata_kuliah_id]?.nama_mk || '-',
+          ruangan_nama: ruangById?.[j.ruangan_id]?.nama_ruangan || '-',
+        }));
+
+        const jadwalIds = new Set(enriched.map(j => j.id));
+        const absMhs = (Array.isArray(absensi) ? absensi : []).filter(
+          a => String(a.mahasiswa_id) === String(profile.id) && jadwalIds.has(a.jadwal_id)
+        );
+
+        const hadir = absMhs.filter(a => a.status_absensi === 'Hadir').length;
+        const total = absMhs.length;
+        const pct = total ? Math.round((hadir / total) * 100) : 0;
+
+        setJadwalList(enriched);
+        setRekap({ hadir, total, pct });
+      } catch (err) {
+        console.error('Gagal memuat dashboard mahasiswa:', err);
+      }
+    };
+
+    load();
+    return () => {
+      isMounted = false;
+    };
   }, [profile]);
+
 
   const barColor = p => p >= 75 ? '#10b981' : p >= 50 ? '#f59e0b' : '#ef4444';
 

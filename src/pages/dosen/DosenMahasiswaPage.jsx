@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuth } from '../../context/AuthContext';
-import { jadwalDB, mahasiswaDB, mataKuliahDB } from '../../data/mockDatabase';
+import { api } from '../../api/client';
 import DataTable from '../../components/common/DataTable';
+
 
 export default function DosenMahasiswaPage() {
   const { profile } = useAuth();
@@ -12,19 +13,52 @@ export default function DosenMahasiswaPage() {
 
   useEffect(() => {
     if (!profile) return;
-    const jadwal = jadwalDB.getByDosen(profile.id);
-    const uniqueKelas = [...new Set(jadwal.map(j => j.kelas))];
-    setKelasList(uniqueKelas);
-    if (uniqueKelas.length > 0) { setKelas(uniqueKelas[0]); }
+
+    let isMounted = true;
+
+    const load = async () => {
+      try {
+        const jadwal = await api.get(`/jadwal?dosen_id=${profile.id}`);
+        const uniqueKelas = [...new Set((Array.isArray(jadwal) ? jadwal : []).map(j => j.kelas))];
+        if (!isMounted) return;
+        setKelasList(uniqueKelas);
+        if (uniqueKelas.length > 0) setKelas(uniqueKelas[0]);
+      } catch (err) {
+        console.error('Gagal memuat kelas dosen:', err);
+      }
+    };
+
+    load();
+    return () => {
+      isMounted = false;
+    };
   }, [profile]);
 
   useEffect(() => {
     if (!kelas) return;
-    setMahasiswaList(mahasiswaDB.getAll().filter(m => m.kelas === kelas));
+
+    let isMounted = true;
+
+    const load = async () => {
+      try {
+        const all = await api.get('/mahasiswa');
+        if (!isMounted) return;
+        setMahasiswaList((Array.isArray(all) ? all : []).filter(m => m.kelas === kelas));
+      } catch (err) {
+        console.error('Gagal memuat mahasiswa:', err);
+      }
+    };
+
+    load();
+    return () => {
+      isMounted = false;
+    };
   }, [kelas]);
+
 
   const columns = [
     { key: 'nim', label: 'NIM' },
+
     { key: 'nama', label: 'Nama' },
     { key: 'email', label: 'Email' },
     { key: 'prodi', label: 'Prodi' },
