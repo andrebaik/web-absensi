@@ -14,7 +14,7 @@ export default function RekapAbsensiPage() {
         const rows = await api.get('/absensi/rekap/admin');
         // Backend output: { mata_kuliah, mahasiswa_id, hadir, izin, sakit, alpha, total, persentase }
         const mapped = (Array.isArray(rows) ? rows : []).map(r => ({
-          mhs_nim: String(r.mahasiswa_id ?? ''),
+          mhs_nim: String(r.mahasiswa_nim ?? ''),
           mhs_nama: r.mahasiswa_nama || String(r.mahasiswa_id ?? ''),
           mk_nama: r.mata_kuliah || '-',
           hadir: r.hadir ?? 0,
