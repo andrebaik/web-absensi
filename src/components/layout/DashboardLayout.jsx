@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Prism from '../common/Prism';
+
 import {
+
   LayoutDashboard, Users, BookOpen, Calendar, ClipboardList,
   BarChart2, Shield, Database, Home, GraduationCap, ChevronRight,
   LogOut, Menu, X, Building2, UserCog
 } from 'lucide-react';
+
+
 
 const adminNav = [
   { section: 'Dashboard', items: [{ to: '/admin', label: 'Dashboard', icon: LayoutDashboard }] },
@@ -188,8 +191,9 @@ export default function DashboardLayout({ children, title }) {
             }}
           >
             <div style={{ position: 'relative', width: '100%', height: 600 }}>
-              <Prism animationType="hover" timeScale={0.5} height={3.5} baseWidth={5.5} scale={3.6} hueShift={0} colorFrequency={1} noise={0.5} glow={1} transparent />
+              {/* Prism removed to improve mobile performance */}
             </div>
+
           </div>
 
           <div style={{ position: 'relative', zIndex: 1 }}>{children}</div>
