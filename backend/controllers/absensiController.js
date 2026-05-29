@@ -129,8 +129,19 @@ exports.getRekapAdmin = async (req, res) => {
   for (const r of rows) {
     const key = `${r.mahasiswa_id}:${r.mata_kuliah_id}`;
     if (!grouped[key]) {
-      grouped[key] = { mahasiswa_id: r.mahasiswa_id, mata_kuliah_id: r.mata_kuliah_id, hadir: 0, izin: 0, sakit: 0, alpha: 0, total: 0 };
+      grouped[key] = {
+        mahasiswa_id: r.mahasiswa_id,
+        mahasiswa_nim: r.mahasiswa_nim,
+        mahasiswa_nama: r.mahasiswa_nama,
+        mata_kuliah_id: r.mata_kuliah_id,
+        hadir: 0,
+        izin: 0,
+        sakit: 0,
+        alpha: 0,
+        total: 0,
+      };
     }
+
     const k = statusKey(r.status_absensi);
     if (k === 'hadir') grouped[key].hadir++;
     else if (k === 'izin') grouped[key].izin++;
@@ -146,6 +157,8 @@ exports.getRekapAdmin = async (req, res) => {
     mata_kuliah_id: g.mata_kuliah_id,
     mata_kuliah: mkMap.get(g.mata_kuliah_id) || '-',
     mahasiswa_id: g.mahasiswa_id,
+    mahasiswa_nim: g.mahasiswa_nim,
+    mahasiswa_nama: g.mahasiswa_nama,
     hadir: g.hadir,
     izin: g.izin,
     sakit: g.sakit,
@@ -160,12 +173,17 @@ exports.getRekapAdmin = async (req, res) => {
 exports.getRekapDosen = async (req, res) => {
   const { dosenId } = req.params;
 
+  // rekap per mata kuliah + mahasiswa agar nama & nim tampil di UI dosen
   const [rows] = await pool.query(
     `SELECT a.status_absensi,
             j.mata_kuliah_id,
-            a.mahasiswa_id
+            a.mahasiswa_id,
+            m.nim AS mahasiswa_nim,
+            m.nama AS mahasiswa_nama,
+            j.kelas
      FROM absensi a
      JOIN jadwal j ON j.id = a.jadwal_id
+     JOIN mahasiswa m ON m.id = a.mahasiswa_id
      WHERE j.dosen_id = ?`,
     [dosenId]
   );
@@ -175,9 +193,21 @@ exports.getRekapDosen = async (req, res) => {
 
   const grouped = {};
   for (const r of rows) {
-    const key = r.mata_kuliah_id;
+    const key = `${r.mahasiswa_id}:${r.mata_kuliah_id}`;
     if (!grouped[key]) {
-      grouped[key] = { mata_kuliah: mkMap.get(key) || '-', hadir: 0, izin: 0, sakit: 0, alpha: 0, total: 0 };
+      grouped[key] = {
+        mahasiswa_id: r.mahasiswa_id,
+        mahasiswa_nim: r.mahasiswa_nim,
+        mahasiswa_nama: r.mahasiswa_nama,
+        mata_kuliah_id: r.mata_kuliah_id,
+        kelas: r.kelas,
+        hadir: 0,
+        izin: 0,
+        sakit: 0,
+        alpha: 0,
+        total: 0,
+        mata_kuliah: mkMap.get(r.mata_kuliah_id) || '-',
+      };
     }
     const k = statusKey(r.status_absensi);
     if (k === 'hadir') grouped[key].hadir++;
