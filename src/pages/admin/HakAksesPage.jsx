@@ -114,22 +114,45 @@ export default function HakAksesPage() {
   return (
     <DashboardLayout title="Hak Akses Pengguna">
       <div className="page-header">
-        <div><h2>Hak Akses Pengguna</h2><p>Kelola akun dan role pengguna sistem</p></div>
-        <button className="btn btn-primary" onClick={openAdd}><Plus size={15} /> Tambah User</button>
+        <div>
+          <h2>Hak Akses Pengguna</h2>
+          <p>Kelola akun dan role pengguna sistem</p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button className="btn btn-primary" onClick={openAdd} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>
+            <Plus size={15} /> Tambah User
+          </button>
+        </div>
       </div>
+
       <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
         <Shield size={16} style={{ color: '#f59e0b' }} />
-        <span style={{ fontSize: '0.85rem', color: '#92400e' }}>Hanya Admin yang dapat mengakses halaman ini. Setiap role memiliki hak akses berbeda.</span>
+        <span style={{ fontSize: '0.85rem', color: '#92400e' }}>
+          Pembuatan akun mahasiswa dan dosen dilakukan melalui menu Data Mahasiswa dan Data Dosen agar data akademik tetap lengkap.
+        </span>
       </div>
+
       <div className="card">
         <DataTable columns={columns} data={data} searchKeys={['name', 'email', 'role']}
           actions={row => (<>
-            <button className="btn btn-icon" onClick={() => openEdit(row)}><Pencil size={15} /></button>
+            <button
+              className="btn btn-icon"
+              onClick={() => openEdit(row)}
+              disabled
+              style={{ opacity: 0.6, cursor: 'not-allowed' }}
+              title="Edit user dinonaktifkan"
+            >
+              <Pencil size={15} />
+            </button>
             <button className="btn btn-icon" style={{ color: '#ef4444' }} onClick={() => setConfirm(row.id)}><Trash2 size={15} /></button>
           </>)} />
       </div>
       {modal && (
         <Modal title={editId ? 'Edit User' : 'Tambah User'} onClose={() => setModal(false)}>
+          <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, marginBottom: 12, color: '#b91c1c', fontSize: '0.85rem', fontWeight: 500 }}>
+            Form tambah/edit user dinonaktifkan.
+          </div>
+
           <div className="modal-body">
             <div className="form-grid">
               <div className="form-group full">
@@ -159,9 +182,10 @@ export default function HakAksesPage() {
             </div>
           </div>
           <div className="modal-footer">
-            <button className="btn btn-outline" onClick={() => setModal(false)}>Batal</button>
-            <button className="btn btn-primary" onClick={handleSave}>Simpan</button>
+            <button className="btn btn-outline" onClick={() => setModal(false)}>Tutup</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled style={{ opacity: 0.6, cursor: 'not-allowed' }}>Simpan</button>
           </div>
+
         </Modal>
       )}
       {confirm && <ConfirmDialog title="Hapus User" message="Yakin ingin menghapus akun ini?"

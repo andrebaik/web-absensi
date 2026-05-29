@@ -26,12 +26,13 @@ export default function DosenDashboard() {
           ruangan,
           absensi
         ] = await Promise.all([
-          api.get(`/jadwal?dosen_id=${profile.id}`),
+          api.get(`/jadwal/dosen/${profile.id}`),
           api.get('/mahasiswa'),
           api.get('/mata-kuliah'),
           api.get('/ruangan'),
-          api.get('/absensi')
+          api.get(`/absensi/rekap/dosen/${profile.id}`)
         ]);
+
 
         if (!isMounted) return;
 
@@ -57,10 +58,11 @@ export default function DosenDashboard() {
         const kelas = [...new Set(enriched.map(j => j.kelas))];
         const mhsCount = (Array.isArray(mahasiswa) ? mahasiswa : []).filter(m => kelas.includes(m.kelas)).length;
 
-        const jadwalIds = new Set(enriched.map(j => j.id));
-        const absCount = (Array.isArray(absensi) ? absensi : []).filter(a => jadwalIds.has(a.jadwal_id)).length;
+        const rekap = Array.isArray(absensi) ? absensi : [];
+        const totalAbsensi = rekap.reduce((sum, r) => sum + (Number(r.total) || 0), 0);
 
-        setStats({ jadwal: enriched.length, absensi: absCount, mahasiswa: mhsCount });
+        setStats({ jadwal: enriched.length, absensi: totalAbsensi, mahasiswa: mhsCount });
+
       } catch (err) {
         console.error('Gagal memuat dashboard dosen:', err);
       }

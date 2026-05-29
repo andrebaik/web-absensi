@@ -55,8 +55,9 @@ export default function ForgotPasswordPage() {
             </p>
             <strong style={{ color: '#1e3a5f' }}>{email}</strong>
             <p style={{ color: '#94a3b8', fontSize: '0.78rem', marginTop: 12 }}>
-              (Demo: hubungi admin untuk reset password manual)
+              (Demo: sistem reset password belum aktif di server. Tidak ada email otomatis.)
             </p>
+
           </div>
         )}
         <div className="login-links" style={{ marginTop: 20 }}>

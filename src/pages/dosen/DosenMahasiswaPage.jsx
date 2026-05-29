@@ -12,48 +12,68 @@ export default function DosenMahasiswaPage() {
   const [mahasiswaList, setMahasiswaList] = useState([]);
 
   useEffect(() => {
-    if (!profile) return;
+  if (!profile?.id) return;
 
-    let isMounted = true;
+  let isMounted = true;
 
-    const load = async () => {
-      try {
-        const jadwal = await api.get(`/jadwal?dosen_id=${profile.id}`);
-        const uniqueKelas = [...new Set((Array.isArray(jadwal) ? jadwal : []).map(j => j.kelas))];
-        if (!isMounted) return;
-        setKelasList(uniqueKelas);
-        if (uniqueKelas.length > 0) setKelas(uniqueKelas[0]);
-      } catch (err) {
-        console.error('Gagal memuat kelas dosen:', err);
-      }
-    };
+  const load = async () => {
+    try {
+      const jadwal = await api.get(`/jadwal/dosen/${profile.id}`);
 
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, [profile]);
+      const uniqueKelas = [
+        ...new Set(
+          (Array.isArray(jadwal) ? jadwal : [])
+            .map(j => j.kelas)
+            .filter(Boolean)
+        )
+      ];
+
+      if (!isMounted) return;
+
+      setKelasList(uniqueKelas);
+      setKelas(uniqueKelas[0] || '');
+    } catch (err) {
+      console.error('Gagal memuat kelas dosen:', err);
+    }
+  };
+
+  load();
+
+  return () => {
+    isMounted = false;
+  };
+}, [profile]);
 
   useEffect(() => {
-    if (!kelas) return;
+  if (!kelas) {
+    setMahasiswaList([]);
+    return;
+  }
 
-    let isMounted = true;
+  let isMounted = true;
 
-    const load = async () => {
-      try {
-        const all = await api.get('/mahasiswa');
-        if (!isMounted) return;
-        setMahasiswaList((Array.isArray(all) ? all : []).filter(m => m.kelas === kelas));
-      } catch (err) {
-        console.error('Gagal memuat mahasiswa:', err);
-      }
-    };
+  const load = async () => {
+    try {
+      const all = await api.get('/mahasiswa');
 
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, [kelas]);
+      if (!isMounted) return;
+
+      const filtered = (Array.isArray(all) ? all : []).filter(
+        m => m.kelas === kelas
+      );
+
+      setMahasiswaList(filtered);
+    } catch (err) {
+      console.error('Gagal memuat mahasiswa:', err);
+    }
+  };
+
+  load();
+
+  return () => {
+    isMounted = false;
+  };
+}, [kelas]);
 
 
   const columns = [
@@ -74,9 +94,17 @@ export default function DosenMahasiswaPage() {
       <div className="card">
         <div className="table-controls">
           <label style={{ fontSize: '0.85rem', fontWeight: 500 }}>Filter Kelas:</label>
-          <select className="filter-select" value={kelas} onChange={e => setKelas(e.target.value)}>
-            {kelasList.map(k => <option key={k}>{k}</option>)}
-          </select>
+          <select
+  className="filter-select"
+  value={kelas}
+  onChange={e => setKelas(e.target.value)}
+>
+  {kelasList.map(k => (
+    <option key={k} value={k}>
+      {k}
+    </option>
+  ))}
+</select>
           <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{mahasiswaList.length} mahasiswa</span>
         </div>
         <DataTable columns={columns} data={mahasiswaList} searchKeys={['nim', 'nama', 'email']} />

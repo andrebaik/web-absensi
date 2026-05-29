@@ -27,7 +27,7 @@ export default function AdminDashboard() {
           api.get('/mata-kuliah'),
           api.get('/ruangan'),
           api.get('/jadwal'),
-          api.get('/absensi'),
+          api.get(`/absensi/mahasiswa/${profile.id}`),
         ]);
 
         if (!isMounted) return;
@@ -49,7 +49,6 @@ export default function AdminDashboard() {
       isMounted = false;
     };
   }, []);
-
 
   const quickLinks = [
     { to: '/admin/mahasiswa', label: 'Kelola Mahasiswa', desc: 'Tambah, edit, hapus data mahasiswa', icon: GraduationCap },

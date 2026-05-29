@@ -1,26 +1,34 @@
-# TODO - Replace mockDatabase with backend API
+# TODO - Perbaikan Koneksi API Frontend <-> Backend (ASINETKW)
 
-## Task
-Ganti penggunaan `mockDatabase` pada file-file yang terdeteksi dengan pemanggilan backend Express/MySQL via `src/api/client.js`. Setelah CRUD, fetch ulang data. Jangan ubah desain UI.
+## Checklist Mapping & Fix
+- [ ] Buat mapping global seluruh pemanggilan `api.get/post/put/delete` di frontend dengan route backend
+- [x] Perbaiki `src/pages/admin/BackupPage.jsx`: ganti `/backupLog` -> `/backup-log` (GET/POST)
 
-## Files yang harus diubah
-- src/pages/auth/ForgotPasswordPage.jsx
-- src/pages/admin/BackupPage.jsx
-- src/pages/admin/RekapAbsensiPage.jsx
-- src/pages/dosen/DosenJadwalPage.jsx
-- src/pages/dosen/DosenRekapPage.jsx
+- [ ] Perbaiki `src/pages/dosen/DosenDashboard.jsx`: hilangkan `GET /absensi` (admin-only) dan ganti ke `GET /absensi/rekap/dosen/:dosenId`
+- [ ] Perbaiki `src/pages/mahasiswa/MahasiswaDashboard.jsx`: hilangkan `GET /absensi` (admin-only) dan ganti ke `GET /absensi/rekap/mahasiswa/:mahasiswaId`
+- [ ] Perbaiki `src/pages/admin/HakAksesPage.jsx`:
+  - [ ] Disable/Sembunyikan tombol Tambah User dan Edit User
+  - [ ] Tambahkan keterangan UI sesuai requirement OPSIONAL A
+  - [ ] Pastikan masih bisa GET `/users` dan DELETE `/users/:id`
 
-## Step plan
-1. [x] Identifikasi endpoint yang dibutuhkan dari backend routes:
-   - /auth/forgot-password
-   - /backupLog
-   - /mahasiswa, /dosen, /mata_kuliah, /ruangan, /jadwal
-   - /absensi untuk rekap admin/dosen
-2. [ ] Ubah ForgotPasswordPage: ganti `authDB` mock menjadi POST `/auth/forgot-password`.
-3. [ ] Ubah BackupPage: ganti sumber data ekspor dari endpoint GET masing-masing tabel + log backup dari GET `/backupLog`.
-4. [ ] Ubah RekapAbsensiPage: ganti perhitungan rekap dengan GET `/absensi/rekap/admin` (kalau bentuk data match; jika tidak, lakukan pemetaan tetap tanpa ubah UI).
-5. [ ] Ubah DosenJadwalPage: ganti list jadwal + join mk/ruangan dari endpoint GET `/jadwal/dosen/:id` dan /mata_kuliah, /ruangan.
-6. [ ] Ubah DosenRekapPage: ganti rekap dengan GET `/absensi/rekap/dosen/:dosenId` atau komposisi dari endpoint yang ada.
-7. [ ] Pastikan setelah create/update/delete dilakukan fetch ulang (untuk halaman ini: Backup hanya create log; rekap/jadwal hanya read).
-8. [ ] Jalankan build/lint/dev untuk validasi.
+- [x] Perbaiki `src/pages/auth/ForgotPasswordPage.jsx`:
+  - [x] Tampilkan pesan bahwa fitur reset password masih demo/belum aktif
+
+
+
+
+- [ ] Scan ulang global setelah perubahan:
+  - [ ] cari `backupLog`/`/backupLog`
+  - [ ] cari `/jadwal?dosen_id` dan `/jadwal?kelas`
+  - [ ] cari `api.get('/absensi')` di file dosen/mahasiswa
+  - [ ] cari `api/api/`
+- [ ] Jalankan `npm run build` dan pastikan build sukses
+
+## Laporan Akhir
+- [ ] Daftar file frontend yang diubah
+- [ ] Daftar file backend yang diubah
+- [ ] Endpoint yang diperbaiki
+- [ ] Endpoint baru yang dibuat (jika ada)
+- [ ] Endpoint yang dihapus/diganti
+- [ ] Cara test admin/dosen/mahasiswa
 

@@ -103,8 +103,10 @@ export default function BackupPage() {
 
   async function fetchLogs() {
     try {
-      const rows = await api.get('/backupLog');
+      const rows = await api.get('/backup-log');
       setLogs(Array.isArray(rows) ? rows : []);
+
+
     } catch (e) {
       addToast('Gagal memuat riwayat backup', 'error');
     }
@@ -125,10 +127,14 @@ export default function BackupPage() {
         return;
       }
 
-      await api.post('/backupLog', { nama_data: item.label }, user?.token);
+
+      await api.post('/backup-log', { nama_data: item.label }, user?.token);
+
       await fetchLogs();
+
       addToast(`Backup ${item.label} berhasil diunduh`);
     } catch (e) {
+
       addToast(e.message || 'Gagal membackup data', 'error');
     }
   }

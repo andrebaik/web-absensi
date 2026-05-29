@@ -23,13 +23,15 @@ export default function MahasiswaDashboard() {
           mataKuliah,
           ruangan,
           jadwal,
-          absensi,
+          rekapAbsensi,
         ] = await Promise.all([
+
           api.get('/mata-kuliah'),
           api.get('/ruangan'),
-          api.get(`/jadwal?kelas=${encodeURIComponent(profile.kelas)}`),
-          api.get('/absensi'),
+          api.get(`/jadwal/kelas/${encodeURIComponent(profile.kelas)}`),
+          api.get(`/absensi/rekap/mahasiswa/${profile.id}`),
         ]);
+
 
         if (!isMounted) return;
 
@@ -51,17 +53,16 @@ export default function MahasiswaDashboard() {
           ruangan_nama: ruangById?.[j.ruangan_id]?.nama_ruangan || '-',
         }));
 
-        const jadwalIds = new Set(enriched.map(j => j.id));
-        const absMhs = (Array.isArray(absensi) ? absensi : []).filter(
-          a => String(a.mahasiswa_id) === String(profile.id) && jadwalIds.has(a.jadwal_id)
-        );
+        // rekapAbsensi: agregat per mata kuliah dengan field hadir/total/persentase
+        const rekap = Array.isArray(rekapAbsensi) ? rekapAbsensi : [];
 
-        const hadir = absMhs.filter(a => a.status_absensi === 'Hadir').length;
-        const total = absMhs.length;
+        const hadir = rekap.reduce((sum, r) => sum + (Number(r.hadir) || 0), 0);
+        const total = rekap.reduce((sum, r) => sum + (Number(r.total) || 0), 0);
         const pct = total ? Math.round((hadir / total) * 100) : 0;
 
         setJadwalList(enriched);
         setRekap({ hadir, total, pct });
+
       } catch (err) {
         console.error('Gagal memuat dashboard mahasiswa:', err);
       }
