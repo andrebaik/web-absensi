@@ -20,24 +20,29 @@ export default function AdminDashboard() {
           mataKuliah,
           ruangan,
           jadwal,
-          absensi
+          rekapAdmin,
         ] = await Promise.all([
           api.get('/mahasiswa'),
           api.get('/dosen'),
           api.get('/mata-kuliah'),
           api.get('/ruangan'),
           api.get('/jadwal'),
-          api.get(`/absensi/mahasiswa/${profile.id}`),
+          api.get('/absensi/rekap/admin'),
         ]);
 
         if (!isMounted) return;
+
+        const totalAbsensi = Array.isArray(rekapAdmin)
+          ? rekapAdmin.reduce((sum, r) => sum + (Number(r.total) || 0), 0)
+          : 0;
+
         setStats({
           mhs: Array.isArray(mahasiswa) ? mahasiswa.length : 0,
           dosen: Array.isArray(dosen) ? dosen.length : 0,
           mk: Array.isArray(mataKuliah) ? mataKuliah.length : 0,
           ruangan: Array.isArray(ruangan) ? ruangan.length : 0,
           jadwal: Array.isArray(jadwal) ? jadwal.length : 0,
-          absensi: Array.isArray(absensi) ? absensi.length : 0,
+          absensi: totalAbsensi,
         });
       } catch (err) {
         console.error('Gagal mengambil statistik dashboard:', err);
@@ -49,6 +54,7 @@ export default function AdminDashboard() {
       isMounted = false;
     };
   }, []);
+
 
   const quickLinks = [
     { to: '/admin/mahasiswa', label: 'Kelola Mahasiswa', desc: 'Tambah, edit, hapus data mahasiswa', icon: GraduationCap },
