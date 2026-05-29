@@ -3,9 +3,10 @@ import DashboardLayout from '../../components/layout/DashboardLayout';
 import DataTable from '../../components/common/DataTable';
 import Modal from '../../components/common/Modal';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
-import { dosenDB } from '../../data/mockDatabase';
 import { useToast } from '../../context/ToastContext';
+import { api } from '../../api/client';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+
 
 const emptyForm = { nidn: '', nama: '', email: '', prodi: '', no_hp: '', status: 'Aktif' };
 const PRODI = ['Teknik Informatika', 'Sistem Informasi', 'Manajemen Informatika'];
@@ -19,7 +20,23 @@ export default function DosenPage() {
   const [confirm, setConfirm] = useState(null);
   const { addToast } = useToast();
 
-  useEffect(() => { setData(dosenDB.getAll()); }, []);
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      try {
+        const rows = await api.get('/dosen');
+        if (isMounted) setData(Array.isArray(rows) ? rows : []);
+      } catch (e) {
+        console.error(e);
+        if (isMounted) addToast('Gagal memuat data dosen', 'error');
+      }
+    };
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [addToast]);
+
 
   function validate() {
     const e = {};
@@ -34,18 +51,52 @@ export default function DosenPage() {
   function openAdd() { setForm(emptyForm); setEditId(null); setErrors({}); setModal(true); }
   function openEdit(row) { setForm({ ...row }); setEditId(row.id); setErrors({}); setModal(true); }
 
+  async function refreshData() {
+    try {
+      const rows = await api.get('/dosen');
+      setData(Array.isArray(rows) ? rows : []);
+    } catch (e) {
+      console.error(e);
+      addToast('Gagal memuat data dosen', 'error');
+    }
+  }
+
   function handleSave() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    if (editId) { dosenDB.update(editId, form); addToast('Data dosen berhasil diperbarui'); }
-    else { dosenDB.create(form); addToast('Dosen berhasil ditambahkan'); }
-    setData(dosenDB.getAll()); setModal(false);
+
+    (async () => {
+      try {
+        if (editId) {
+          await api.put(`/dosen/${editId}`, form);
+          addToast('Data dosen berhasil diperbarui');
+        } else {
+          await api.post('/dosen', form);
+          addToast('Dosen berhasil ditambahkan');
+        }
+        await refreshData();
+        setModal(false);
+      } catch (err) {
+        console.error(err);
+        addToast(err?.message || 'Gagal menyimpan data dosen', 'error');
+      }
+    })();
   }
 
   function handleDelete(id) {
-    dosenDB.delete(id); setData(dosenDB.getAll()); setConfirm(null);
-    addToast('Data dosen berhasil dihapus', 'error');
+    (async () => {
+      try {
+        await api.del(`/dosen/${id}`);
+        addToast('Data dosen berhasil dihapus', 'error');
+        await refreshData();
+        setConfirm(null);
+      } catch (err) {
+        console.error(err);
+        addToast(err?.message || 'Gagal menghapus data dosen', 'error');
+      }
+    })();
   }
+
 
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
