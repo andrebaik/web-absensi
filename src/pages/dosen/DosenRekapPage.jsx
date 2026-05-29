@@ -17,7 +17,7 @@ export default function DosenRekapPage() {
         const rows = await api.get(`/absensi/rekap/dosen/${profile.id}`);
 
         const mapped = (Array.isArray(rows) ? rows : []).map(r => ({
-          nim: String(r.mahasiswa_id ?? ''),
+          nim: String(r.mahasiswa_nim ?? r.mahasiswa_id ?? ''),
           nama: r.mahasiswa_nama || String(r.mahasiswa_id ?? ''),
           mk_nama: r.mata_kuliah || '-',
           kelas: r.kelas || '',
