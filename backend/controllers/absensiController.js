@@ -111,12 +111,18 @@ exports.getRekapByMahasiswa = async (req, res) => {
 };
 
 exports.getRekapAdmin = async (req, res) => {
-  // sederhana: ambil rekap per mahasiswa dengan jumlah per mata_kuliah
+  // ambil rekap per mahasiswa + mata kuliah dan sertakan nim/nama mahasiswa
   const [rows] = await pool.query(`
-    SELECT a.mahasiswa_id, j.mata_kuliah_id, a.status_absensi
+    SELECT a.mahasiswa_id,
+           m.nim AS mahasiswa_nim,
+           m.nama AS mahasiswa_nama,
+           j.mata_kuliah_id,
+           a.status_absensi
     FROM absensi a
     JOIN jadwal j ON j.id = a.jadwal_id
+    JOIN mahasiswa m ON m.id = a.mahasiswa_id
   `);
+
 
   // kompatibel dengan frontend yang biasanya pakai rekapan agregat per mahasiswa
   const grouped = {};
