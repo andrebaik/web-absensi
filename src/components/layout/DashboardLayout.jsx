@@ -61,15 +61,12 @@ export default function DashboardLayout({ children, title }) {
   const roleLabel = { admin: 'Administrator', dosen: 'Dosen', mahasiswa: 'Mahasiswa' };
 
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false);
-  const [logoutKeyword, setLogoutKeyword] = useState('');
 
   function handleRequestLogout() {
-    setLogoutKeyword('');
     setConfirmLogoutOpen(true);
   }
 
   function handleConfirmLogout() {
-    if (logoutKeyword !== 'KELUAR') return;
     setConfirmLogoutOpen(false);
     logout();
     navigate('/login');
@@ -114,48 +111,32 @@ export default function DashboardLayout({ children, title }) {
           </button>
 
           {confirmLogoutOpen && (
-            <div className="confirm-overlay">
-              <div className="confirm-box">
-                <div className="confirm-icon">⚠️</div>
-                <h4>Logout?</h4>
-                <p>Untuk melanjutkan, ketik <strong>KELUAR</strong> lalu klik “Konfirmasi”.</p>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
-                  <input
-                    className="form-control"
-                    value={logoutKeyword}
-                    onChange={(e) => setLogoutKeyword(e.target.value)}
-                    placeholder="KELUAR"
-                    autoComplete="off"
-                    autoFocus
-                    style={{ textAlign: 'center' }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleConfirmLogout();
-                    }}
-                  />
-                </div>
-
-                <div className="confirm-actions">
-                  <button
-                    className="btn btn-outline"
-                    onClick={() => {
-                      setConfirmLogoutOpen(false);
-                      setLogoutKeyword('');
-                    }}
-                  >
-                    Batal
-                  </button>
-                  <button
-                    className="btn btn-danger"
-                    onClick={handleConfirmLogout}
-                    style={{ opacity: logoutKeyword === 'KELUAR' ? 1 : 0.6, pointerEvents: logoutKeyword === 'KELUAR' ? 'auto' : 'none' }}
-                  >
-                    Konfirmasi
-                  </button>
-                </div>
-              </div>
+        <div className="confirm-overlay" onClick={() => setConfirmLogoutOpen(false)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-icon">⚠️</div>
+                
+            <h4>Keluar dari akun?</h4>
+                
+            <p>Apakah kamu yakin ingin logout dari sistem?</p>
+                
+            <div className="confirm-actions">
+              <button
+                className="btn btn-outline"
+                onClick={() => setConfirmLogoutOpen(false)}
+              >
+                Batal
+              </button>
+                
+              <button
+                className="btn btn-danger"
+                onClick={handleConfirmLogout}
+              >
+                Ya, Keluar
+              </button>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
         </div>
       </aside>

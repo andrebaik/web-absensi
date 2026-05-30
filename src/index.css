@@ -298,7 +298,6 @@ canvas {
 /* Text panjang seperti email biar nggak bikin layar melebar */
 .demo-account,
 .navbar-user,
-.card,
 td,
 th {
   overflow-wrap: anywhere;
@@ -519,5 +518,63 @@ th {
   table td {
     padding: 10px 12px;
     font-size: 0.78rem;
+  }
+}
+
+.dashboard-dosen-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.dashboard-dosen-grid > .card {
+  min-width: 0;
+}
+
+.jadwal-card {
+  min-width: 0;
+}
+
+.jadwal-card h4 {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.jadwal-card .detail-row {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.jadwal-card .detail-row strong {
+  min-width: 0;
+  color: var(--text);
+}
+
+.jadwal-card .detail-row span {
+  min-width: 0;
+  line-height: 1.4;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+@media (max-width: 900px) {
+  .dashboard-dosen-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-dosen-grid {
+    gap: 14px;
+  }
+
+  .jadwal-card .detail-row {
+    grid-template-columns: 62px minmax(0, 1fr);
+    font-size: 0.82rem;
   }
 }
