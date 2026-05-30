@@ -34,7 +34,7 @@ table { border-collapse: collapse; width: 100%; }
 ul { list-style: none; }
 
 /* ===== LAYOUT ===== */
-.layout { display: flex; min-height: 100vh; }
+.layout { display: flex; min-height: 100  vh; }
 .main-content { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; display: flex; flex-direction: column; transition: var(--transition); }
 .page-body { padding: 28px; flex: 1; margin-top: var(--navbar-h); }
 
@@ -250,4 +250,274 @@ table tr:hover td { background: rgba(59,130,246,0.03); }
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .jadwal-grid { grid-template-columns: 1fr; }
+}
+
+
+/* ===== MOBILE POLISH FIX ===== */
+
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+/* Biar isi dashboard nggak maksa melebar */
+.layout,
+.main-content,
+.page-body,
+.card {
+  min-width: 0;
+}
+
+/* Tabel biar nggak nabrak layar */
+.table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius);
+}
+
+.table-wrapper table {
+  min-width: 720px;
+}
+
+/* Tombol aksi di tabel biar nggak mepet */
+.table-actions {
+  flex-wrap: wrap;
+}
+
+/* Text panjang seperti email biar nggak bikin layar melebar */
+.demo-account,
+.navbar-user,
+.card,
+td,
+th {
+  overflow-wrap: anywhere;
+}
+
+/* ===== TABLET & MOBILE ===== */
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+
+  .navbar {
+    height: 58px;
+    padding: 0 12px;
+  }
+
+  .navbar-title {
+    max-width: 48vw;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .navbar-info {
+    display: none;
+  }
+
+  .navbar-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.78rem;
+  }
+
+  .page-body {
+    padding: 14px 12px 24px;
+    margin-top: 58px;
+  }
+
+  .page-header {
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .page-header h2 {
+    font-size: 1.15rem;
+  }
+
+  .page-header p {
+    font-size: 0.8rem;
+  }
+
+  .page-header .btn,
+  .page-header button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .stat-info h3 {
+    font-size: 1.35rem;
+  }
+
+  .table-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input,
+  .filter-select,
+  .form-control {
+    width: 100%;
+  }
+
+  .btn {
+    justify-content: center;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    max-height: 92svh;
+    margin: 0;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .modal-footer .btn,
+  .modal-footer button {
+    width: 100%;
+  }
+
+  .confirm-box {
+    max-width: 94vw;
+    padding: 22px 16px;
+  }
+
+  .confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirm-actions .btn,
+  .confirm-actions button {
+    width: 100%;
+  }
+
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .toast {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
+/* ===== HP KECIL ===== */
+@media (max-width: 480px) {
+  .login-page {
+    padding: 14px;
+    align-items: flex-start;
+    padding-top: 28px;
+  }
+
+  .login-box {
+    padding: 24px 18px;
+    border-radius: 16px;
+  }
+
+  .login-logo h1 {
+    font-size: 1.55rem;
+  }
+
+  .login-logo p {
+    font-size: 0.78rem;
+  }
+
+  .demo-account {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .demo-account span:last-child {
+    font-size: 0.7rem !important;
+    line-height: 1.35;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .jadwal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .absensi-status {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .status-btn {
+    width: 100%;
+    padding: 9px 10px;
+    text-align: center;
+  }
+
+  .table-wrapper {
+    margin-left: -4px;
+    margin-right: -4px;
+    padding-bottom: 6px;
+  }
+
+  table th,
+  table td {
+    padding: 10px 12px;
+    font-size: 0.78rem;
+  }
 }

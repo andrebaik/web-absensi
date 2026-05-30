@@ -1,34 +1,48 @@
-# TODO - Perbaikan Koneksi API Frontend <-> Backend (ASINETKW)
+# TODO - Responsive UI Fixes (ASINETKW)
 
-## Checklist Mapping & Fix
-- [ ] Buat mapping global seluruh pemanggilan `api.get/post/put/delete` di frontend dengan route backend
-- [x] Perbaiki `src/pages/admin/BackupPage.jsx`: ganti `/backupLog` -> `/backup-log` (GET/POST)
+## Step 1: Repo understanding
+- [x] Identify layout/components/pages that affect responsiveness.
+- [x] Inspect DashboardLayout, DataTable, Modal, ConfirmDialog, StatCard.
+- [x] Inspect key pages (admin, dosen, mahasiswa, login/forgot).
 
-- [ ] Perbaiki `src/pages/dosen/DosenDashboard.jsx`: hilangkan `GET /absensi` (admin-only) dan ganti ke `GET /absensi/rekap/dosen/:dosenId`
-- [ ] Perbaiki `src/pages/mahasiswa/MahasiswaDashboard.jsx`: hilangkan `GET /absensi` (admin-only) dan ganti ke `GET /absensi/rekap/mahasiswa/:mahasiswaId`
-- [ ] Perbaiki `src/pages/admin/HakAksesPage.jsx`:
-  - [ ] Disable/Sembunyikan tombol Tambah User dan Edit User
-  - [ ] Tambahkan keterangan UI sesuai requirement OPSIONAL A
-  - [ ] Pastikan masih bisa GET `/users` dan DELETE `/users/:id`
+## Step 2: Build responsive base styles
+- [ ] Ensure global CSS exists and contains responsive rules for:
+  - dashboard layout + mobile sidebar drawer
+  - page header
+  - stats grid
+  - table controls + horizontal scroll wrapper
+  - forms grid
+  - modal + confirm dialog sizes (<= 92-95vw, max 90vh)
 
-- [x] Perbaiki `src/pages/auth/ForgotPasswordPage.jsx`:
-  - [x] Tampilkan pesan bahwa fitur reset password masih demo/belum aktif
+## Step 3: Fix Sidebar/Header responsiveness
+- [ ] Update DashboardLayout + (if needed) CSS to prevent content overlapping.
+- [ ] Ensure hamburger drawer works and main content shifts correctly.
 
+## Step 4: Fix DataTable responsiveness
+- [ ] Ensure table wrapper has overflow-x-auto.
+- [ ] Make table controls stack vertically on mobile.
+- [ ] Make action buttons not overflow.
 
+## Step 5: Fix page header/button responsiveness
+- [ ] Make page header stack on mobile and action button full width.
 
+## Step 6: Fix Forms layout in modals
+- [ ] Ensure form grid becomes 1 column on mobile.
+- [ ] Ensure inputs/selects width 100% and errors align.
 
-- [ ] Scan ulang global setelah perubahan:
-  - [ ] cari `backupLog`/`/backupLog`
-  - [ ] cari `/jadwal?dosen_id` dan `/jadwal?kelas`
-  - [ ] cari `api.get('/absensi')` di file dosen/mahasiswa
-  - [ ] cari `api/api/`
-- [ ] Jalankan `npm run build` dan pastikan build sukses
+## Step 7: Fix Modal & ConfirmDialog on mobile
+- [ ] Adjust modal width/margins for mobile and make body scrollable.
+- [ ] Adjust confirm dialog width and button layout on small screens.
 
-## Laporan Akhir
-- [ ] Daftar file frontend yang diubah
-- [ ] Daftar file backend yang diubah
-- [ ] Endpoint yang diperbaiki
-- [ ] Endpoint baru yang dibuat (jika ada)
-- [ ] Endpoint yang dihapus/diganti
-- [ ] Cara test admin/dosen/mahasiswa
+## Step 8: Fix Login + Forgot Password pages
+- [ ] Verify centered card and padding on mobile.
+
+## Step 9: Page-specific checks
+- [ ] Admin pages: headers, tables, forms, modals.
+- [ ] Dosen pages: rekap/dashboard/cards and tables.
+- [ ] Mahasiswa pages: same checks.
+
+## Step 10: Testing & build
+- [ ] Test responsive at 375/414/768/1024.
+- [ ] Run `npm run build` and fix any build errors.
 

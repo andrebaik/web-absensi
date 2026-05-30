@@ -9,9 +9,11 @@ backend/dist/
 # env
 .env
 .env.local
+.env.deploy.backup
 .env.*.local
 backend/.env
 backend/.env.local
+backend/.env.deploy.backup
 
 # Logs
 logs
