@@ -775,6 +775,7 @@ SHOW TABLES;
 Project ini dibuat untuk kebutuhan pembelajaran dan pengembangan sistem informasi kampus.
 
 ```txt
+Nama Developer : Andre (FULLSTACK DEV)
 Nama Aplikasi : ASINETKW
 Jenis Project : Sistem Absensi dan Manajemen Kampus
 Role Utama    : Admin, Dosen, Mahasiswa
