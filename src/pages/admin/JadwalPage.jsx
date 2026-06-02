@@ -122,7 +122,7 @@ export default function JadwalPage() {
       }
 
       console.error('Gagal menyimpan jadwal:', err);
-      addToast('Gagal menyimpan data', 'error');
+      addToast('Jadwal sepertinya bentrok', 'error');
     }
   }
 
